@@ -40,19 +40,19 @@ app.use('/api/pos', posRoutes);
 
 // Serve Admin Dashboard
 app.use('/admin', express.static(path.join(__dirname, 'admin-dashboard', 'dist')));
-app.get('/admin/*', (req, res) => {
+app.get('/admin/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin-dashboard', 'dist', 'index.html'));
 });
 
 // Serve Merchant Dashboard
 app.use('/merchant', express.static(path.join(__dirname, 'merchant-dashboard', 'dist')));
-app.get('/merchant/*', (req, res) => {
+app.get('/merchant/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'merchant-dashboard', 'dist', 'index.html'));
 });
 
 // Serve POS App
 app.use('/', express.static(path.join(__dirname, 'pos-app', 'dist')));
-app.get('/*', (req, res) => {
+app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'pos-app', 'dist', 'index.html'));
 });
 

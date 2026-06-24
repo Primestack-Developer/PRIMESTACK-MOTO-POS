@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API = import.meta.env.VITE_API_URL || ''
 
 const C = {
   sidebar:'#1a3a28', accent:'#16a34a', accentLight:'#dcfce7', accentMid:'#86efac',
