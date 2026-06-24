@@ -27,16 +27,18 @@ app.get('/admin/{*path}', (_req, res) => {
   res.sendFile(path.join(__dirname, 'admin-dashboard', 'dist', 'index.html'));
 });
 
-// Merchant Dashboard → /merchant
+// Merchant Dashboard → /merchant  
 app.use('/merchant', require('express').static(path.join(__dirname, 'merchant-dashboard', 'dist')));
 app.get('/merchant/{*path}', (_req, res) => {
   res.sendFile(path.join(__dirname, 'merchant-dashboard', 'dist', 'index.html'));
 });
 
-// POS App → / (catch-all last)
+// POS App → / (must be last — but never intercept API routes)
 app.use(require('express').static(path.join(__dirname, 'pos-app', 'dist')));
-app.get('/{*path}', (_req, res) => {
-  // Don't serve index.html for API routes
+app.get('/{*path}', (req, res, next) => {
+  // Let API routes pass through
+  const apiPrefixes = ['/admin/', '/merchant/', '/pos/', '/webhooks/', '/stripe/', '/system/', '/api/'];
+  if (apiPrefixes.some(p => req.path.startsWith(p))) return next();
   res.sendFile(path.join(__dirname, 'pos-app', 'dist', 'index.html'));
 });
 
