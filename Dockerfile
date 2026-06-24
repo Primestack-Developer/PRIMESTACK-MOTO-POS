@@ -25,6 +25,8 @@ RUN npm run build
 # Base stage
 FROM node:20-slim AS base
 WORKDIR /app
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl
 COPY package*.json ./
 RUN npm ci --only=production
 
