@@ -45,4 +45,4 @@ RUN ls -la admin-dashboard/dist/ && ls -la merchant-dashboard/dist/ && ls -la po
 
 EXPOSE 3000
 
-CMD ["node", "scripts/start.js"]
+CMD ["node", "server.js"]

@@ -4,7 +4,7 @@
   "description": "PrimeStack MOTO POS System",
   "main": "server.js",
   "scripts": {
-    "start": "node scripts/start.js",
+    "start": "node server.js",
     "dev": "node index.js",
     "build": "node scripts/use-production-schema.js && npm run build:admin && npm run build:merchant && npm run build:pos && npx prisma generate",
     "build:admin": "cd admin-dashboard && npm ci && npm run build",
