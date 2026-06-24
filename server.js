@@ -14,6 +14,11 @@ const app = require('./index');
 
 const PORT = process.env.PORT || 3000;
 
+// ── Health check endpoint (required by Railway) ───────────────────────────────
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // ── Serve built frontend apps ────────────────────────────────────────────────
 
 // Admin Dashboard → /admin

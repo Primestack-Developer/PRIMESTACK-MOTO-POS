@@ -22,31 +22,37 @@ RUN npm ci
 COPY pos-app ./
 RUN npm run build
 
-# Base stage
+# Base stage — install production dependencies
 FROM node:20-slim AS base
 WORKDIR /app
-# Install OpenSSL for Prisma
 RUN apt-get update -y && apt-get install -y openssl
 COPY package*.json ./
 RUN npm ci --only=production
 
 # Production stage
-FROM base AS production
+FROM node:20-slim AS production
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y openssl
+
+# Copy node_modules
 COPY --from=base /app/node_modules ./node_modules
+
+# Copy all app source files
+COPY package*.json ./
 COPY prisma ./prisma
-COPY src ./src
+COPY index.js ./
 COPY server.js ./
 COPY seed.js ./
 COPY scripts ./scripts
 
-# Copy built dashboards from build stages
+# Copy built frontend apps
 COPY --from=admin-dashboard-build /app/admin-dashboard/dist ./admin-dashboard/dist
 COPY --from=merchant-dashboard-build /app/merchant-dashboard/dist ./merchant-dashboard/dist
 COPY --from=pos-app-build /app/pos-app/dist ./pos-app/dist
 
+# Switch to PostgreSQL schema and generate Prisma client
 RUN node scripts/use-production-schema.js
 RUN npx prisma generate
 
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["node", "scripts/start.js"]
