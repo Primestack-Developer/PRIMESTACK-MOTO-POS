@@ -559,7 +559,8 @@ async function handleStripeWebhook(req, res) {
       });
 
       console.log(`Refund processed: Order ${order.orderId} | $${refundAmount} | ${refundReason}`);
-    }
+
+    } else if (event.type === 'charge.dispute.created') {
       // ── CHARGEBACK RECEIVED ──────────────────────────────────────────────────
       const dispute = event.data.object;
       const chargeId = dispute.charge;
@@ -2044,8 +2045,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' })
 })
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
+// ─── Start Server / Export ───────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`PrimeStack MOTO POS server running on port ${PORT}`);
-});
+// Export app for server.js (production static file serving)
+module.exports = app;
+
+// Start directly only when run as main module (local dev: node index.js)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`PrimeStack MOTO POS server running on port ${PORT}`);
+  });
+}
