@@ -1,39 +1,44 @@
 # Dependencies
 node_modules/
-*/node_modules/
+admin-dashboard/node_modules/
+merchant-dashboard/node_modules/
+pos-app/node_modules/
 
-# Environment variables
+# Environment variables — NEVER commit these
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.development
 
-# Database files
+# Keep production env files (they have no secrets)
+!.env.production
+!admin-dashboard/.env.production
+!merchant-dashboard/.env.production
+!pos-app/.env.production
+
+# Database
+prisma/dev.db
+prisma/dev.db-journal
 *.db
 *.db-journal
-dev.db
-dev.db-journal
-prisma/migrations/
 
 # Logs
 logs/
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
-# Build directories
-dist/
-build/
+# Build outputs (Railway builds them fresh)
+admin-dashboard/dist/
+merchant-dashboard/dist/
+pos-app/dist/
 
-# IDE files
+# IDE
 .idea/
 .vscode/
-*.swp
-*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
