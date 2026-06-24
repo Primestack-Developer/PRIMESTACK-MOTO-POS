@@ -1,58 +1,48 @@
-# Build admin dashboard
-FROM node:20-slim AS admin-dashboard-build
-WORKDIR /app/admin-dashboard
-COPY admin-dashboard/package*.json ./
-RUN npm ci
-COPY admin-dashboard ./
-RUN npm run build
+FROM node:20-slim
 
-# Build merchant dashboard
-FROM node:20-slim AS merchant-dashboard-build
-WORKDIR /app/merchant-dashboard
-COPY merchant-dashboard/package*.json ./
-RUN npm ci
-COPY merchant-dashboard ./
-RUN npm run build
-
-# Build pos app
-FROM node:20-slim AS pos-app-build
-WORKDIR /app/pos-app
-COPY pos-app/package*.json ./
-RUN npm ci
-COPY pos-app ./
-RUN npm run build
-
-# Base stage — install production dependencies
-FROM node:20-slim AS base
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y openssl
+
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Copy and install backend dependencies
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Production stage
-FROM node:20-slim AS production
-WORKDIR /app
-RUN apt-get update -y && apt-get install -y openssl
-
-# Copy node_modules
-COPY --from=base /app/node_modules ./node_modules
-
-# Copy all app source files
-COPY package*.json ./
-COPY prisma ./prisma
+# Copy backend source
 COPY index.js ./
 COPY server.js ./
 COPY seed.js ./
 COPY scripts ./scripts
+COPY prisma ./prisma
 
-# Copy built frontend apps
-COPY --from=admin-dashboard-build /app/admin-dashboard/dist ./admin-dashboard/dist
-COPY --from=merchant-dashboard-build /app/merchant-dashboard/dist ./merchant-dashboard/dist
-COPY --from=pos-app-build /app/pos-app/dist ./pos-app/dist
-
-# Switch to PostgreSQL schema and generate Prisma client
+# Switch to PostgreSQL schema
 RUN node scripts/use-production-schema.js
+
+# Generate Prisma client
 RUN npx prisma generate
 
+# Build Admin Dashboard
+COPY admin-dashboard/package*.json ./admin-dashboard/
+RUN cd admin-dashboard && npm ci
+COPY admin-dashboard ./admin-dashboard
+RUN cd admin-dashboard && npm run build
+
+# Build Merchant Dashboard
+COPY merchant-dashboard/package*.json ./merchant-dashboard/
+RUN cd merchant-dashboard && npm ci
+COPY merchant-dashboard ./merchant-dashboard
+RUN cd merchant-dashboard && npm run build
+
+# Build POS App
+COPY pos-app/package*.json ./pos-app/
+RUN cd pos-app && npm ci
+COPY pos-app ./pos-app
+RUN cd pos-app && npm run build
+
+# Verify dist files exist
+RUN ls -la admin-dashboard/dist/ && ls -la merchant-dashboard/dist/ && ls -la pos-app/dist/
+
 EXPOSE 3000
+
 CMD ["node", "scripts/start.js"]
