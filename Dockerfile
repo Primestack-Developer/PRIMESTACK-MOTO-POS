@@ -28,6 +28,8 @@ COPY admin-dashboard/index.html ./
 COPY admin-dashboard/vite.config.js ./
 COPY admin-dashboard/public ./public
 COPY admin-dashboard/src ./src
+COPY admin-dashboard/.env.production ./
+ENV NODE_ENV=production
 RUN npm run build
 RUN ls -la dist/
 
@@ -39,6 +41,8 @@ COPY merchant-dashboard/index.html ./
 COPY merchant-dashboard/vite.config.js ./
 COPY merchant-dashboard/public ./public
 COPY merchant-dashboard/src ./src
+COPY merchant-dashboard/.env.production ./
+ENV NODE_ENV=production
 RUN npm run build
 RUN ls -la dist/
 
@@ -50,11 +54,13 @@ COPY pos-app/index.html ./
 COPY pos-app/vite.config.js ./
 COPY pos-app/public ./public
 COPY pos-app/src ./src
+COPY pos-app/.env.production ./
+ENV NODE_ENV=production
 RUN npm run build
 RUN ls -la dist/
 
 # ── Final working directory ───────────────────────────────────────────────────
 WORKDIR /app
 
-EXPOSE 3000
+EXPOSE 10000
 CMD ["node", "scripts/start.js"]
