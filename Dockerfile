@@ -57,4 +57,4 @@ RUN ls -la dist/
 WORKDIR /app
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "scripts/start.js"]

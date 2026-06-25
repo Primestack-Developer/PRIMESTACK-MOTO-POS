@@ -4,13 +4,13 @@
   "description": "PrimeStack MOTO POS System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/start.js",
     "dev": "node index.js",
     "build": "node scripts/use-production-schema.js && npm run build:admin && npm run build:merchant && npm run build:pos && npx prisma generate",
     "build:admin": "cd admin-dashboard && npm ci && npm run build",
     "build:merchant": "cd merchant-dashboard && npm ci && npm run build",
     "build:pos": "cd pos-app && npm ci && npm run build",
-    "migrate": "npx prisma migrate deploy",
+    "migrate": "npx prisma migrate deploy --schema=./prisma/schema.prisma",
     "seed": "node seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
