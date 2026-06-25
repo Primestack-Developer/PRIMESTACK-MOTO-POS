@@ -681,7 +681,8 @@ router.post('/admin/login', loginLimiter, checkBruteForce, validate(schemas.admi
 
     const valid = await bcrypt.compare(password, admin.password)
     if (!valid) {
-      const failedLogins = admin.failedLogins + 1
+      const currentFailedLogins = Number(admin.failedLogins) || 0
+      const failedLogins = currentFailedLogins + 1
       const lockData = failedLogins >= 10
         ? { failedLogins: 0, lockedUntil: new Date(Date.now() + 60 * 60 * 1000) } // lock 1 hour
         : { failedLogins }
