@@ -45,13 +45,14 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // Register service worker
+      // Remove any legacy PrimePOS service worker and cache when loading the app.
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.log('SW failed:', err));
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(reg => reg.unregister());
         });
+      }
+      if ('caches' in window) {
+        caches.delete('primepos-v1');
       }
     </script>
   </body>
