@@ -985,14 +985,7 @@ router.delete('/admin/merchants/:merchantId', authenticateAdmin, async (req, res
     await prisma.order.deleteMany({ where: { merchantId: merchant.id } });
     await prisma.deviceLog.deleteMany({ where: { merchantId: merchant.id } });
     await prisma.pOSDevice.deleteMany({ where: { merchantId: merchant.id } });
-    await prisma.chatMessage.deleteMany({ 
-      where: { 
-        OR: [
-          { senderId: merchant.id, senderType: 'merchant' },
-          { receiverId: merchant.id, receiverType: 'merchant' }
-        ]
-      }
-    });
+    // ChatMessages will be automatically deleted by cascade from merchant relation
     // Finally delete the merchant
     await prisma.merchant.delete({ where: { merchantId } });
 
