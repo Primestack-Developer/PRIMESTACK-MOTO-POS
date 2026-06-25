@@ -1,53 +1,45 @@
 require('dotenv').config();
 const express = require('express');
 const path    = require('path');
-const PORT    = process.env.PORT || 3000;
 
-// ── Minimal express app that responds to /health immediately ──────────────────
-const app = express();
+const app  = express();
+const PORT = process.env.PORT || 3000;
 
-// Health check must respond FAST before anything else loads
+// ── Health check — responds immediately, no dependencies ──────────────────────
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
 });
 
-// ── Load full API async so health check is always available ───────────────────
-let apiReady = false;
+// ── Mount full API ─────────────────────────────────────────────────────────────
+// index.js exports app without calling listen (require.main guard)
+const api = require('./index');
+app.use(api);
 
-async function loadAPI() {
-  try {
-    console.log('Running migrations...');
-    const { execSync } = require('child_process');
-    try { execSync('npx prisma migrate deploy', { stdio: 'inherit' }); } catch(e) { console.log('Migration:', e.message); }
-    try { execSync('node seed.js', { stdio: 'inherit' }); } catch(e) { console.log('Seed:', e.message); }
-
-    console.log('Loading API...');
-    const apiApp = require('./index');
-
-    // Mount API routes
-    app.use(apiApp);
-    apiReady = true;
-    console.log('API loaded successfully.');
-  } catch(e) {
-    console.error('API load error:', e.message);
-  }
-}
-
-// ── Static frontends ──────────────────────────────────────────────────────────
+// ── Static frontend files ─────────────────────────────────────────────────────
 const dist = (name) => path.join(__dirname, name, 'dist');
 
-app.use('/admin',    express.static(dist('admin-dashboard')));
+// Admin Dashboard at /admin
+app.use('/admin', express.static(dist('admin-dashboard')));
+app.use('/admin', (_req, res) => {
+  res.sendFile(path.join(dist('admin-dashboard'), 'index.html'));
+});
+
+// Merchant Dashboard at /merchant
 app.use('/merchant', express.static(dist('merchant-dashboard')));
-app.use(            express.static(dist('pos-app')));
+app.use('/merchant', (_req, res) => {
+  res.sendFile(path.join(dist('merchant-dashboard'), 'index.html'));
+});
 
-app.get('/admin',    (_req, res) => res.sendFile(path.join(dist('admin-dashboard'),    'index.html')));
-app.get('/admin/*',  (_req, res) => res.sendFile(path.join(dist('admin-dashboard'),    'index.html')));
-app.get('/merchant', (_req, res) => res.sendFile(path.join(dist('merchant-dashboard'), 'index.html')));
-app.get('/merchant/*',(_req, res) => res.sendFile(path.join(dist('merchant-dashboard'),'index.html')));
-app.get('*',         (_req, res) => res.sendFile(path.join(dist('pos-app'),            'index.html')));
+// POS App at / (root) — catch-all last
+app.use(express.static(dist('pos-app')));
+app.use((_req, res) => {
+  res.sendFile(path.join(dist('pos-app'), 'index.html'));
+});
 
-// ── Start server FIRST then load API ─────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-  loadAPI();
+  console.log(`PrimeStack MOTO POS running on port ${PORT}`);
+  console.log(`  Admin:    /admin`);
+  console.log(`  Merchant: /merchant`);
+  console.log(`  POS:      /`);
 });
