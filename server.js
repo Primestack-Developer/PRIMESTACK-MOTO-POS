@@ -5,16 +5,16 @@ const path    = require('path');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Health check — responds immediately, no dependencies ──────────────────────
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
 });
 
-// ── Mount full API FIRST (so API routes work!) ────────────────────────────────
+// ── Mount API routes WITH security middleware ─────────────────────────────────
 const api = require('./index');
 app.use(api);
 
-// ── Static frontend files ─────────────────────────────────────────────────────
+// ── Static frontend files WITHOUT security middleware ─────────────────────────
 const dist = (name) => path.join(__dirname, name, 'dist');
 
 // Admin Dashboard at /admin
@@ -35,7 +35,7 @@ app.use((_req, res) => {
   res.sendFile(path.join(dist('pos-app'), 'index.html'));
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// ── Start server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`PrimeStack MOTO POS running on port ${PORT}`);
   console.log(`  Admin:    /admin`);

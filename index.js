@@ -11,8 +11,7 @@ const { z } = require('zod');
 const rateLimit = require('express-rate-limit');
 
 const prisma = new PrismaClient();
-const app = express();
-const PORT = process.env.PORT || 3001;
+const router = express.Router();
 
 // ─── Validation Helper ────────────────────────────────────────────────────────
 
@@ -157,7 +156,7 @@ const getStripe = () => {
 // ─── Security Middleware ──────────────────────────────────────────────────────
 
 // 1. Helmet — sets secure HTTP headers, but more permissive for static assets
-app.use(helmet({
+router.use(helmet({
   contentSecurityPolicy: false, // disabled so Stripe iframe works
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
@@ -176,7 +175,7 @@ const allowedOrigins = [
   process.env.POS_URL,
 ].filter(Boolean)
 
-app.use(cors({
+router.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (mobile apps, curl, Stripe webhooks)
     if (!origin) return cb(null, true)
@@ -187,20 +186,20 @@ app.use(cors({
 }))
 
 // 3. Rate limiters
-app.use(apiLimiter)
+router.use(apiLimiter)
 
 // 4. Raw body for Stripe webhooks — MUST come before express.json()
-app.use('/webhooks/stripe', express.raw({ type: 'application/json' }))
-app.use('/stripe/webhook',  express.raw({ type: 'application/json' }))
+router.use('/webhooks/stripe', express.raw({ type: 'application/json' }))
+router.use('/stripe/webhook',  express.raw({ type: 'application/json' }))
 
 // 5. Body parser with size limit for document uploads
-app.use(express.json({ limit: '20mb' }))
+router.use(express.json({ limit: '20mb' }))
 
 // 6. HPP — prevent HTTP parameter pollution
-app.use(hpp())
+router.use(hpp())
 
 // 7. Input sanitisation — strip any $ or . keys (NoSQL injection protection)
-app.use((req, _res, next) => {
+router.use((req, _res, next) => {
   const clean = (obj) => {
     if (obj && typeof obj === 'object') {
       Object.keys(obj).forEach(k => {
@@ -216,7 +215,7 @@ app.use((req, _res, next) => {
 })
 
 // 8. Security response headers
-app.use((_req, res, next) => {
+router.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('X-XSS-Protection', '1; mode=block')
@@ -715,7 +714,7 @@ async function handleStripeWebhook(req, res) {
 
 // ─── Admin Routes ─────────────────────────────────────────────────────────────
 
-app.post('/admin/register', validate(schemas.adminRegister), async (req, res) => {
+router.post('/admin/register', validate(schemas.adminRegister), async (req, res) => {
   try {
     const { email, password, name } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -726,7 +725,7 @@ app.post('/admin/register', validate(schemas.adminRegister), async (req, res) =>
   }
 });
 
-app.post('/admin/login', loginLimiter, checkBruteForce, validate(schemas.adminLogin), async (req, res) => {
+router.post('/admin/login', loginLimiter, checkBruteForce, validate(schemas.adminLogin), async (req, res) => {
   try {
     const { email, password } = req.body
     const ip = req.ip || req.connection.remoteAddress
@@ -769,7 +768,7 @@ app.post('/admin/login', loginLimiter, checkBruteForce, validate(schemas.adminLo
 })
 
 // Recovery key login — bypasses password, clears lockout
-app.post('/admin/login/recovery', loginLimiter, async (req, res) => {
+router.post('/admin/login/recovery', loginLimiter, async (req, res) => {
   try {
     const { recoveryKey } = req.body
     if (!recoveryKey) return res.status(400).json({ error: 'Recovery key required' })
@@ -803,7 +802,7 @@ app.post('/admin/login/recovery', loginLimiter, async (req, res) => {
 })
 
 // Change admin password
-app.put('/admin/password', authenticateAdmin, async (req, res) => {
+router.put('/admin/password', authenticateAdmin, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' })
@@ -820,7 +819,7 @@ app.put('/admin/password', authenticateAdmin, async (req, res) => {
 })
 
 // Set / verify admin PIN
-app.post('/admin/pin/set', authenticateAdmin, async (req, res) => {
+router.post('/admin/pin/set', authenticateAdmin, async (req, res) => {
   try {
     const { pin, currentPassword } = req.body
     if (!pin || !/^\d{6}$/.test(pin)) return res.status(400).json({ error: 'PIN must be exactly 6 digits' })
@@ -835,7 +834,7 @@ app.post('/admin/pin/set', authenticateAdmin, async (req, res) => {
   }
 })
 
-app.post('/admin/pin/verify', authenticateAdmin, async (req, res) => {
+router.post('/admin/pin/verify', authenticateAdmin, async (req, res) => {
   try {
     const { pin } = req.body
     if (!pin) return res.status(400).json({ error: 'PIN required' })
@@ -850,7 +849,7 @@ app.post('/admin/pin/verify', authenticateAdmin, async (req, res) => {
 })
 
 // Generate new recovery key (requires PIN confirmation)
-app.post('/admin/recovery-key/regenerate', authenticateAdmin, async (req, res) => {
+router.post('/admin/recovery-key/regenerate', authenticateAdmin, async (req, res) => {
   try {
     const { pin } = req.body
     const admin = await prisma.admin.findUnique({ where: { id: req.admin.id } })
@@ -868,7 +867,7 @@ app.post('/admin/recovery-key/regenerate', authenticateAdmin, async (req, res) =
   }
 })
 
-app.post('/admin/merchants', authenticateAdmin, validate(schemas.createMerchant), async (req, res) => {
+router.post('/admin/merchants', authenticateAdmin, validate(schemas.createMerchant), async (req, res) => {
   try {
     const { name, email, phone, address, country, businessName } = req.body;
     const password = Math.random().toString(36).substring(2, 10);
@@ -899,7 +898,7 @@ app.post('/admin/merchants', authenticateAdmin, validate(schemas.createMerchant)
   }
 });
 
-app.get('/admin/merchants', authenticateAdmin, async (req, res) => {
+router.get('/admin/merchants', authenticateAdmin, async (req, res) => {
   try {
     const merchants = await prisma.merchant.findMany({ orderBy: { createdAt: 'desc' } });
     res.json({ merchants });
@@ -908,7 +907,7 @@ app.get('/admin/merchants', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.post('/admin/merchants/:merchantId/status', authenticateAdmin, validate(schemas.merchantStatus), async (req, res) => {
+router.post('/admin/merchants/:merchantId/status', authenticateAdmin, validate(schemas.merchantStatus), async (req, res) => {
   try {
     const { merchantId } = req.params;
     const { status } = req.body;
@@ -955,7 +954,7 @@ app.post('/admin/merchants/:merchantId/status', authenticateAdmin, validate(sche
   }
 });
 
-app.post('/admin/merchants/:merchantId/reset-password', authenticateAdmin, async (req, res) => {
+router.post('/admin/merchants/:merchantId/reset-password', authenticateAdmin, async (req, res) => {
   try {
     const { merchantId } = req.params;
     const merchant = await prisma.merchant.findUnique({ where: { merchantId } });
@@ -989,7 +988,7 @@ app.post('/admin/merchants/:merchantId/reset-password', authenticateAdmin, async
   }
 });
 
-app.post('/admin/merchants/:merchantId/pos-devices', authenticateAdmin, async (req, res) => {
+router.post('/admin/merchants/:merchantId/pos-devices', authenticateAdmin, async (req, res) => {
   try {
     const { merchantId } = req.params;
     const merchant = await prisma.merchant.findUnique({ where: { merchantId } });
@@ -1028,7 +1027,7 @@ app.post('/admin/merchants/:merchantId/pos-devices', authenticateAdmin, async (r
   }
 });
 
-app.delete('/admin/merchants/:merchantId', authenticateAdmin, async (req, res) => {
+router.delete('/admin/merchants/:merchantId', authenticateAdmin, async (req, res) => {
   try {
     const { merchantId } = req.params;
     const merchant = await prisma.merchant.findUnique({ where: { merchantId } });
@@ -1065,7 +1064,7 @@ app.delete('/admin/merchants/:merchantId', authenticateAdmin, async (req, res) =
   }
 });
 
-app.get('/admin/pos-devices', authenticateAdmin, async (req, res) => {
+router.get('/admin/pos-devices', authenticateAdmin, async (req, res) => {
   try {
     const posDevices = await prisma.pOSDevice.findMany({
       include: { merchant: true },
@@ -1077,7 +1076,7 @@ app.get('/admin/pos-devices', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.get('/admin/orders', authenticateAdmin, async (req, res) => {
+router.get('/admin/orders', authenticateAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       include: {
@@ -1096,7 +1095,7 @@ app.get('/admin/orders', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.get('/admin/transactions', authenticateAdmin, async (req, res) => {
+router.get('/admin/transactions', authenticateAdmin, async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
       include: { merchant: true, posDevice: true },
@@ -1108,7 +1107,7 @@ app.get('/admin/transactions', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.post('/admin/pos-devices/:posId/status', authenticateAdmin, validate(schemas.posStatus), async (req, res) => {
+router.post('/admin/pos-devices/:posId/status', authenticateAdmin, validate(schemas.posStatus), async (req, res) => {
   try {
     const { posId } = req.params;
     const { status } = req.body;
@@ -1135,7 +1134,7 @@ app.post('/admin/pos-devices/:posId/status', authenticateAdmin, validate(schemas
   }
 });
 
-app.get('/admin/notifications', authenticateAdmin, async (req, res) => {
+router.get('/admin/notifications', authenticateAdmin, async (req, res) => {
   try {
     const notifications = await prisma.adminNotification.findMany({
       orderBy: { createdAt: 'desc' },
@@ -1147,7 +1146,7 @@ app.get('/admin/notifications', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.post('/admin/notifications/:id/read', authenticateAdmin, async (req, res) => {
+router.post('/admin/notifications/:id/read', authenticateAdmin, async (req, res) => {
   try {
     await prisma.adminNotification.update({
       where: { id: req.params.id },
@@ -1159,7 +1158,7 @@ app.post('/admin/notifications/:id/read', authenticateAdmin, async (req, res) =>
   }
 });
 
-app.post('/admin/notifications/read-all', authenticateAdmin, async (req, res) => {
+router.post('/admin/notifications/read-all', authenticateAdmin, async (req, res) => {
   try {
     await prisma.adminNotification.updateMany({ data: { read: true } });
     res.json({ ok: true });
@@ -1168,7 +1167,7 @@ app.post('/admin/notifications/read-all', authenticateAdmin, async (req, res) =>
   }
 });
 
-app.get('/admin/webhook-logs', authenticateAdmin, async (req, res) => {
+router.get('/admin/webhook-logs', authenticateAdmin, async (req, res) => {
   try {
     const webhookLogs = await prisma.webhookLog.findMany({ orderBy: { receivedAt: 'desc' } });
     res.json({ webhookLogs });
@@ -1179,7 +1178,7 @@ app.get('/admin/webhook-logs', authenticateAdmin, async (req, res) => {
 
 // ─── Merchant Routes ──────────────────────────────────────────────────────────
 
-app.post('/merchant/login', loginLimiter, checkBruteForce, validate(schemas.merchantLogin), async (req, res) => {
+router.post('/merchant/login', loginLimiter, checkBruteForce, validate(schemas.merchantLogin), async (req, res) => {
   try {
     const { email, password } = req.body
     const ip = req.ip || req.connection.remoteAddress
@@ -1206,7 +1205,7 @@ app.post('/merchant/login', loginLimiter, checkBruteForce, validate(schemas.merc
   }
 })
 
-app.post('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
+router.post('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
   try {
     const posId = await generatePosId();
     const activationCode = generateActivationCode();
@@ -1219,7 +1218,7 @@ app.post('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
   }
 });
 
-app.get('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
+router.get('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
   try {
     const posDevices = await prisma.pOSDevice.findMany({
       where: { merchantId: req.merchant.id },
@@ -1231,7 +1230,7 @@ app.get('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
   }
 });
 
-app.get('/merchant/customers', authenticateMerchant, async (req, res) => {
+router.get('/merchant/customers', authenticateMerchant, async (req, res) => {
   try {
     const customers = await prisma.customer.findMany({
       where: { merchantId: req.merchant.id },
@@ -1243,7 +1242,7 @@ app.get('/merchant/customers', authenticateMerchant, async (req, res) => {
   }
 });
 
-app.post('/merchant/customers', authenticateMerchant, validate(schemas.createCustomer), async (req, res) => {
+router.post('/merchant/customers', authenticateMerchant, validate(schemas.createCustomer), async (req, res) => {
   try {
     const { name, email, phone, billingAddress } = req.body;
     const customer = await prisma.customer.create({
@@ -1255,7 +1254,7 @@ app.post('/merchant/customers', authenticateMerchant, validate(schemas.createCus
   }
 });
 
-app.get('/merchant/orders', authenticateMerchant, async (req, res) => {
+router.get('/merchant/orders', authenticateMerchant, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       where: { merchantId: req.merchant.id },
@@ -1268,7 +1267,7 @@ app.get('/merchant/orders', authenticateMerchant, async (req, res) => {
   }
 });
 
-app.get('/merchant/transactions', authenticateMerchant, async (req, res) => {
+router.get('/merchant/transactions', authenticateMerchant, async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
       where: { merchantId: req.merchant.id },
@@ -1281,7 +1280,7 @@ app.get('/merchant/transactions', authenticateMerchant, async (req, res) => {
   }
 });
 
-app.put('/merchant/profile', authenticateMerchant, validate(schemas.updateProfile), async (req, res) => {
+router.put('/merchant/profile', authenticateMerchant, validate(schemas.updateProfile), async (req, res) => {
   try {
     const { name, businessName, phone, address, country } = req.body;
     const updated = await prisma.merchant.update({
@@ -1311,7 +1310,7 @@ app.put('/merchant/profile', authenticateMerchant, validate(schemas.updateProfil
   }
 });
 
-app.put('/merchant/password', authenticateMerchant, validate(schemas.changePassword), async (req, res) => {
+router.put('/merchant/password', authenticateMerchant, validate(schemas.changePassword), async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
@@ -1333,7 +1332,7 @@ app.put('/merchant/password', authenticateMerchant, validate(schemas.changePassw
 
 // ─── POS Routes ───────────────────────────────────────────────────────────────
 
-app.post('/pos/activate', activationLimiter, validate(schemas.activatePOS), async (req, res) => {
+router.post('/pos/activate', activationLimiter, validate(schemas.activatePOS), async (req, res) => {
   try {
     const { activation_code, device_info } = req.body;
     const posDevice = await prisma.pOSDevice.findUnique({
@@ -1390,7 +1389,7 @@ app.post('/pos/activate', activationLimiter, validate(schemas.activatePOS), asyn
   }
 });
 
-app.post('/pos/heartbeat', authenticatePOS, async (req, res) => {
+router.post('/pos/heartbeat', authenticatePOS, async (req, res) => {
   try {
     await prisma.pOSDevice.update({ where: { id: req.pos.id }, data: { lastSeenAt: new Date() } });
     await prisma.deviceLog.create({
@@ -1402,7 +1401,7 @@ app.post('/pos/heartbeat', authenticatePOS, async (req, res) => {
   }
 });
 
-app.get('/pos/customers', authenticatePOS, async (req, res) => {
+router.get('/pos/customers', authenticatePOS, async (req, res) => {
   try {
     const customers = await prisma.customer.findMany({
       where: { merchantId: req.pos.merchantId },
@@ -1415,7 +1414,7 @@ app.get('/pos/customers', authenticatePOS, async (req, res) => {
   }
 });
 
-app.post('/pos/customers', authenticatePOS, validate(schemas.createCustomer), async (req, res) => {
+router.post('/pos/customers', authenticatePOS, validate(schemas.createCustomer), async (req, res) => {
   try {
     const { name, email, phone, billingAddress } = req.body;
     const customer = await prisma.customer.create({
@@ -1433,7 +1432,7 @@ app.post('/pos/customers', authenticatePOS, validate(schemas.createCustomer), as
   }
 });
 
-app.get('/pos/orders', authenticatePOS, async (req, res) => {
+router.get('/pos/orders', authenticatePOS, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       where: { posId: req.pos.id },
@@ -1446,7 +1445,7 @@ app.get('/pos/orders', authenticatePOS, async (req, res) => {
   }
 });
 
-app.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrder), async (req, res) => {
+router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrder), async (req, res) => {
   try {
     const { amount, currency, description, customer_id, customer_name } = req.body;
     const orderId = await generateOrderId();
@@ -1524,7 +1523,7 @@ app.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrder),
   }
 });
 
-app.get('/pos/moto/orders/:orderId', authenticatePOS, async (req, res) => {
+router.get('/pos/moto/orders/:orderId', authenticatePOS, async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await prisma.order.findUnique({
@@ -1544,7 +1543,7 @@ app.get('/pos/moto/orders/:orderId', authenticatePOS, async (req, res) => {
   }
 });
 
-app.post('/pos/transactions', authenticatePOS, validate(schemas.createTransaction), async (req, res) => {
+router.post('/pos/transactions', authenticatePOS, validate(schemas.createTransaction), async (req, res) => {
   try {
     const { amount, currency, customer_email } = req.body;
     const transaction = await prisma.transaction.create({
@@ -1559,7 +1558,7 @@ app.post('/pos/transactions', authenticatePOS, validate(schemas.createTransactio
 // ─── Live Transactions & Manual Actions ───────────────────────────────────────
 
 // Live transactions (recent 100 orders with full details)
-app.get('/admin/live-transactions', authenticateAdmin, async (req, res) => {
+router.get('/admin/live-transactions', authenticateAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       include: {
@@ -1576,7 +1575,7 @@ app.get('/admin/live-transactions', authenticateAdmin, async (req, res) => {
 });
 
 // Manual refund from admin dashboard
-app.post('/admin/orders/:orderId/refund', authenticateAdmin, async (req, res) => {
+router.post('/admin/orders/:orderId/refund', authenticateAdmin, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { reason } = req.body;
@@ -1613,7 +1612,7 @@ app.post('/admin/orders/:orderId/refund', authenticateAdmin, async (req, res) =>
 });
 
 // Block merchant from admin dashboard
-app.post('/admin/orders/:orderId/block-merchant', authenticateAdmin, async (req, res) => {
+router.post('/admin/orders/:orderId/block-merchant', authenticateAdmin, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { reason } = req.body;
@@ -1648,7 +1647,7 @@ app.post('/admin/orders/:orderId/block-merchant', authenticateAdmin, async (req,
 
 // ─── Disputes & Fraud Routes ──────────────────────────────────────────────────
 
-app.get('/admin/disputes', authenticateAdmin, async (req, res) => {
+router.get('/admin/disputes', authenticateAdmin, async (req, res) => {
   try {
     const disputes = await prisma.dispute.findMany({
       include: { merchant: true },
@@ -1658,7 +1657,7 @@ app.get('/admin/disputes', authenticateAdmin, async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.get('/admin/fraud-flags', authenticateAdmin, async (req, res) => {
+router.get('/admin/fraud-flags', authenticateAdmin, async (req, res) => {
   try {
     const flags = await prisma.fraudFlag.findMany({
       include: { merchant: true },
@@ -1668,7 +1667,7 @@ app.get('/admin/fraud-flags', authenticateAdmin, async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/admin/disputes/:id/evidence', authenticateAdmin, async (req, res) => {
+router.post('/admin/disputes/:id/evidence', authenticateAdmin, async (req, res) => {
   try {
     const { notes } = req.body;
     const dispute = await prisma.dispute.findUnique({ where: { id: req.params.id } });
@@ -1681,7 +1680,7 @@ app.post('/admin/disputes/:id/evidence', authenticateAdmin, async (req, res) => 
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/admin/fraud-flags/:id/resolve', authenticateAdmin, async (req, res) => {
+router.post('/admin/fraud-flags/:id/resolve', authenticateAdmin, async (req, res) => {
   try {
     await prisma.fraudFlag.update({ where: { id: req.params.id }, data: { resolved: true } });
     res.json({ message: 'Flag resolved' });
@@ -1691,7 +1690,7 @@ app.post('/admin/fraud-flags/:id/resolve', authenticateAdmin, async (req, res) =
 // ─── System Status Routes ─────────────────────────────────────────────────────
 
 // Public — anyone can check system status (used by merchant/POS on load)
-app.get('/system/status', async (req, res) => {
+router.get('/system/status', async (req, res) => {
   try {
     let status = await prisma.systemStatus.findFirst()
     if (!status) {
@@ -1706,7 +1705,7 @@ app.get('/system/status', async (req, res) => {
 })
 
 // Admin — toggle system online/offline
-app.post('/admin/system/toggle', authenticateAdmin, async (req, res) => {
+router.post('/admin/system/toggle', authenticateAdmin, async (req, res) => {
   try {
     const { online, message } = req.body
     let status = await prisma.systemStatus.findFirst()
@@ -1743,7 +1742,7 @@ app.post('/admin/system/toggle', authenticateAdmin, async (req, res) => {
 // ─── Chat Routes ─────────────────────────────────────────────────────────────
 
 // Admin: get all conversations (one per merchant, show latest message)
-app.get('/admin/chats', authenticateAdmin, async (req, res) => {
+router.get('/admin/chats', authenticateAdmin, async (req, res) => {
   try {
     const merchants = await prisma.merchant.findMany({
       include: {
@@ -1777,7 +1776,7 @@ app.get('/admin/chats', authenticateAdmin, async (req, res) => {
 });
 
 // Admin: get messages with a specific merchant
-app.get('/admin/chats/:merchantId', authenticateAdmin, async (req, res) => {
+router.get('/admin/chats/:merchantId', authenticateAdmin, async (req, res) => {
   try {
     const messages = await prisma.chatMessage.findMany({
       where: { merchantId: req.params.merchantId },
@@ -1795,7 +1794,7 @@ app.get('/admin/chats/:merchantId', authenticateAdmin, async (req, res) => {
 });
 
 // Admin: send message to merchant
-app.post('/admin/chats/:merchantId', authenticateAdmin, async (req, res) => {
+router.post('/admin/chats/:merchantId', authenticateAdmin, async (req, res) => {
   try {
     const { message } = req.body;
     if (!message || !message.trim()) return res.status(400).json({ error: 'Message required' });
@@ -1818,7 +1817,7 @@ app.post('/admin/chats/:merchantId', authenticateAdmin, async (req, res) => {
 });
 
 // Merchant: get messages (chat with admin)
-app.get('/merchant/chat', authenticateMerchant, async (req, res) => {
+router.get('/merchant/chat', authenticateMerchant, async (req, res) => {
   try {
     const messages = await prisma.chatMessage.findMany({
       where: { merchantId: req.merchant.id },
@@ -1836,7 +1835,7 @@ app.get('/merchant/chat', authenticateMerchant, async (req, res) => {
 });
 
 // Merchant: send message to admin
-app.post('/merchant/chat', authenticateMerchant, async (req, res) => {
+router.post('/merchant/chat', authenticateMerchant, async (req, res) => {
   try {
     const { message } = req.body;
     if (!message || !message.trim()) return res.status(400).json({ error: 'Message required' });
@@ -1860,7 +1859,7 @@ app.post('/merchant/chat', authenticateMerchant, async (req, res) => {
 });
 
 // Merchant: unread message count from admin
-app.get('/merchant/chat/unread', authenticateMerchant, async (req, res) => {
+router.get('/merchant/chat/unread', authenticateMerchant, async (req, res) => {
   try {
     const count = await prisma.chatMessage.count({
       where: { merchantId: req.merchant.id, sender: 'admin', read: false }
@@ -1872,7 +1871,7 @@ app.get('/merchant/chat/unread', authenticateMerchant, async (req, res) => {
 });
 
 // Merchant submits customer for verification with documents
-app.post('/merchant/customers/:customerId/verify', authenticateMerchant, validate(schemas.submitVerification), async (req, res) => {
+router.post('/merchant/customers/:customerId/verify', authenticateMerchant, validate(schemas.submitVerification), async (req, res) => {
   try {
     const { customerId } = req.params;
     const { documents, notes } = req.body; // documents = array of { name, base64, type }
@@ -1942,7 +1941,7 @@ app.post('/merchant/customers/:customerId/verify', authenticateMerchant, validat
 });
 
 // Get merchant notifications
-app.get('/merchant/notifications', authenticateMerchant, async (req, res) => {
+router.get('/merchant/notifications', authenticateMerchant, async (req, res) => {
   try {
     const notifications = await prisma.merchantNotification.findMany({
       where: { merchantId: req.merchant.id },
@@ -1955,7 +1954,7 @@ app.get('/merchant/notifications', authenticateMerchant, async (req, res) => {
 });
 
 // Mark notification as read
-app.post('/merchant/notifications/:id/read', authenticateMerchant, async (req, res) => {
+router.post('/merchant/notifications/:id/read', authenticateMerchant, async (req, res) => {
   try {
     await prisma.merchantNotification.update({
       where: { id: req.params.id },
@@ -1968,7 +1967,7 @@ app.post('/merchant/notifications/:id/read', authenticateMerchant, async (req, r
 });
 
 // Admin: get all pending verifications
-app.get('/admin/verifications', authenticateAdmin, async (req, res) => {
+router.get('/admin/verifications', authenticateAdmin, async (req, res) => {
   try {
     const verifications = await prisma.customerVerification.findMany({
       include: { customer: true, merchant: true },
@@ -1981,7 +1980,7 @@ app.get('/admin/verifications', authenticateAdmin, async (req, res) => {
 });
 
 // Admin: approve or reject verification
-app.post('/admin/verifications/:id/review', authenticateAdmin, validate(schemas.reviewVerification), async (req, res) => {
+router.post('/admin/verifications/:id/review', authenticateAdmin, validate(schemas.reviewVerification), async (req, res) => {
   try {
     const { id } = req.params;
     const { action, notes } = req.body; // action: 'approved' | 'rejected'
@@ -2036,12 +2035,12 @@ app.post('/admin/verifications/:id/review', authenticateAdmin, validate(schemas.
   }
 });
 
-app.post('/webhooks/stripe', handleStripeWebhook);
-app.post('/stripe/webhook', handleStripeWebhook);
+router.post('/webhooks/stripe', handleStripeWebhook);
+router.post('/stripe/webhook', handleStripeWebhook);
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 // Catches any unhandled errors and returns safe messages (no stack traces)
-app.use((err, req, res, next) => {
+router.use((err, req, res, next) => {
   console.error('[ERROR]', err.message)
   if (err.message && err.message.startsWith('CORS')) {
     return res.status(403).json({ error: 'Not allowed by CORS policy' })
@@ -2051,11 +2050,13 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server / Export ───────────────────────────────────────────────────
 
-// Export app for server.js (production static file serving)
-module.exports = app;
+// Export router for server.js
+module.exports = router;
 
 // Start directly only when run as main module (local dev: node index.js)
 if (require.main === module) {
+  const app = express();
+  app.use(router);
   app.listen(PORT, () => {
     console.log(`PrimeStack MOTO POS server running on port ${PORT}`);
   });
