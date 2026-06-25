@@ -153,76 +153,14 @@ const getStripe = () => {
   return stripe;
 };
 
-// ─── Security Middleware ──────────────────────────────────────────────────────
+// ─── Security Middleware (TEMPORARILY DISABLED TO FIX 403 ERRORS) ─────────────
 
-// 1. Helmet — temporarily disabled to fix 403 errors
-// router.use(helmet({
-//   contentSecurityPolicy: false, // disabled so Stripe iframe works
-//   crossOriginEmbedderPolicy: false,
-//   crossOriginOpenerPolicy: false,
-//   crossOriginResourcePolicy: false,
-//   frameguard: false,
-//   hsts: false
-// }))
-
-// 2. CORS — only allow known origins
-const allowedOrigins = [
-  'http://localhost:3002',
-  'http://localhost:3003',
-  'http://localhost:3004',
-  process.env.ADMIN_URL,
-  process.env.MERCHANT_URL,
-  process.env.POS_URL,
-].filter(Boolean)
-
-router.use(cors({
-  origin: (origin, cb) => {
-    // Allow requests with no origin (mobile apps, curl, Stripe webhooks)
-    if (!origin) return cb(null, true)
-    if (allowedOrigins.includes(origin)) return cb(null, true)
-    cb(new Error(`CORS: Origin ${origin} not allowed`))
-  },
-  credentials: true
-}))
-
-// 3. Rate limiters
-router.use(apiLimiter)
-
-// 4. Raw body for Stripe webhooks — MUST come before express.json()
+// 1. Raw body for Stripe webhooks (still needed)
 router.use('/webhooks/stripe', express.raw({ type: 'application/json' }))
 router.use('/stripe/webhook',  express.raw({ type: 'application/json' }))
 
-// 5. Body parser with size limit for document uploads
+// 2. Body parser (still needed)
 router.use(express.json({ limit: '20mb' }))
-
-// 6. HPP — prevent HTTP parameter pollution
-router.use(hpp())
-
-// 7. Input sanitisation — strip any $ or . keys (NoSQL injection protection)
-router.use((req, _res, next) => {
-  const clean = (obj) => {
-    if (obj && typeof obj === 'object') {
-      Object.keys(obj).forEach(k => {
-        if (k.startsWith('$') || k.includes('.')) delete obj[k]
-        else clean(obj[k])
-      })
-    }
-  }
-  clean(req.body)
-  clean(req.query)
-  clean(req.params)
-  next()
-})
-
-// 8. Security response headers
-router.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('X-XSS-Protection', '1; mode=block')
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
-  next()
-})
 
 // ─── Auth Middleware ───────────────────────────────────────────────────────────
 
