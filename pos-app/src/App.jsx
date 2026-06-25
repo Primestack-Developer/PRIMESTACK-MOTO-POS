@@ -596,11 +596,6 @@ export default function App() {
           {/* Only show payment page link ONCE — when page hasn't been opened yet */}
           {!linkOpened && curOrder && curOrder.card_entry_url && (
             <div>
-              <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', textAlign: 'left' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#92400e', margin: '0 0 0.375rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Test Card</p>
-                <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#78350f', margin: '0 0 0.2rem', fontFamily: 'monospace' }}>4242 4242 4242 4242</p>
-                <p style={{ fontSize: '0.8rem', color: '#92400e', margin: 0 }}>Expiry: 12/34 | CVC: 123</p>
-              </div>
               <a href={curOrder.card_entry_url} target="_blank" rel="noreferrer"
                 onClick={() => setLinkOpened(true)}
                 style={{ display: 'block', padding: '0.875rem', background: '#1e40af', color: 'white', borderRadius: '14px', textDecoration: 'none', fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.75rem' }}>
