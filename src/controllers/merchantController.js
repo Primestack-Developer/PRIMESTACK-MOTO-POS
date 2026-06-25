@@ -260,7 +260,7 @@ async function submitVerificationRequest(req, res) {
   // Create an admin notification
   await prisma.adminNotification.create({
     data: {
-      type: 'NEW_VERIFICATION_REQUEST',
+      type: 'verification_submitted',
       title: 'New Customer Verification Request',
       message: `${req.user.businessName} submitted a verification request for customer ${request.customer.name}`,
       data: JSON.stringify({ verificationId: request.id })

@@ -28,8 +28,8 @@ const {
   getChatMessages,
   sendChatMessage,
   getMerchantsForChat,
-  getCustomerVerificationRequests,
-  updateCustomerVerificationStatus
+  getVerifications,
+  reviewVerification
 } = require('../controllers/adminController');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
@@ -60,7 +60,7 @@ router.put('/system/status', authenticateToken, requireAdmin, updateSystemStatus
 router.get('/chat/:merchantId', authenticateToken, requireAdmin, getChatMessages);
 router.post('/chat/:merchantId', authenticateToken, requireAdmin, sendChatMessage);
 router.get('/chat/merchants/list', authenticateToken, requireAdmin, getMerchantsForChat);
-router.get('/customer-verifications', authenticateToken, requireAdmin, getCustomerVerificationRequests);
-router.put('/customer-verifications/:id/status', authenticateToken, requireAdmin, updateCustomerVerificationStatus);
+router.get('/verifications', authenticateToken, requireAdmin, getVerifications);
+router.post('/verifications/:id/review', authenticateToken, requireAdmin, reviewVerification);
 
 module.exports = router;

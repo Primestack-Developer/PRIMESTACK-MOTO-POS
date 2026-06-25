@@ -95,104 +95,50 @@ async function getMerchantById(req, res) {
 }
 
 async function getPOSDevices(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [devices, total] = await Promise.all([
-    prisma.pOSDevice.findMany({
-      include: { merchant: true },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.pOSDevice.count()
-  ]);
-  res.json({ devices, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const posDevices = await prisma.pOSDevice.findMany({
+    include: { merchant: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ posDevices });
 }
 
 async function getOrders(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [orders, total] = await Promise.all([
-    prisma.order.findMany({
-      include: { merchant: true, posDevice: true, customer: true, payment: true },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.order.count()
-  ]);
-  res.json({ orders, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const orders = await prisma.order.findMany({
+    include: { merchant: true, posDevice: true, customer: true, payment: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ orders });
 }
 
 async function getTransactions(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [transactions, total] = await Promise.all([
-    prisma.transaction.findMany({
-      include: { merchant: true, posDevice: true },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.transaction.count()
-  ]);
-  res.json({ transactions, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const transactions = await prisma.transaction.findMany({
+    include: { merchant: true, posDevice: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ transactions });
 }
 
 async function getWebhookLogs(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [webhookLogs, total] = await Promise.all([
-    prisma.webhookLog.findMany({
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.webhookLog.count()
-  ]);
-  res.json({ webhookLogs, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const webhookLogs = await prisma.webhookLog.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ webhookLogs });
 }
 
 async function getFraudFlags(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [fraudFlags, total] = await Promise.all([
-    prisma.fraudFlag.findMany({
-      include: { merchant: true },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.fraudFlag.count()
-  ]);
-  res.json({ fraudFlags, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const fraudFlags = await prisma.fraudFlag.findMany({
+    include: { merchant: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ fraudFlags });
 }
 
 async function getDisputes(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [disputes, total] = await Promise.all([
-    prisma.dispute.findMany({
-      include: { merchant: true },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.dispute.count()
-  ]);
-  res.json({ disputes, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const disputes = await prisma.dispute.findMany({
+    include: { merchant: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ disputes });
 }
 
 async function updateMerchantStatus(req, res) {
@@ -389,26 +335,19 @@ async function getMerchantsForChat(req, res) {
   res.json({ conversations: merchants });
 }
 
-async function getCustomerVerificationRequests(req, res) {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
-
-  const [requests, total] = await Promise.all([
-    prisma.customerVerification.findMany({
-      include: { customer: true, merchant: true },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.customerVerification.count()
-  ]);
-  res.json({ requests, total, page, limit, totalPages: Math.ceil(total / limit) });
+async function getVerifications(req, res) {
+  const verifications = await prisma.customerVerification.findMany({
+    include: { customer: true, merchant: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json({ verifications });
 }
 
-async function updateCustomerVerificationStatus(req, res) {
+async function reviewVerification(req, res) {
   const { id } = req.params;
-  const { status, notes } = req.body;
+  const { action, notes } = req.body;
+  const status = action === 'approve' ? 'approved' : 'rejected';
+  
   const verification = await prisma.customerVerification.update({
     where: { id },
     data: { 
@@ -419,16 +358,18 @@ async function updateCustomerVerificationStatus(req, res) {
     },
     include: { customer: true, merchant: true }
   });
+  
   // Create notification for the merchant
   await prisma.merchantNotification.create({
     data: {
       merchantId: verification.merchantId,
-      type: 'VERIFICATION_STATUS',
+      type: `verification_${status}`,
       title: `Customer Verification ${status}`,
       message: `Customer ${verification.customer.name}'s verification has been ${status}`
     }
   });
-  res.json(verification);
+  
+  res.json({ message: `Verification ${status} successfully!` });
 }
 
 module.exports = {
@@ -459,6 +400,6 @@ module.exports = {
   getChatMessages,
   sendChatMessage,
   getMerchantsForChat,
-  getCustomerVerificationRequests,
-  updateCustomerVerificationStatus
+  getVerifications,
+  reviewVerification
 };
