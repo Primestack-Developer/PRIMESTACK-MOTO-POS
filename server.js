@@ -10,12 +10,7 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
 });
 
-// ── Mount full API ─────────────────────────────────────────────────────────────
-// index.js exports app without calling listen (require.main guard)
-const api = require('./index');
-app.use(api);
-
-// ── Static frontend files ─────────────────────────────────────────────────────
+// ── Static frontend files FIRST (before API!) ─────────────────────────────────
 const dist = (name) => path.join(__dirname, name, 'dist');
 
 // Admin Dashboard at /admin
@@ -30,11 +25,16 @@ app.use('/merchant', (_req, res) => {
   res.sendFile(path.join(dist('merchant-dashboard'), 'index.html'));
 });
 
-// POS App at / (root) — catch-all last
+// POS App at / (root)
 app.use(express.static(dist('pos-app')));
 app.use((_req, res) => {
   res.sendFile(path.join(dist('pos-app'), 'index.html'));
 });
+
+// ── Mount full API LAST ───────────────────────────────────────────────────────
+// index.js exports app without calling listen (require.main guard)
+const api = require('./index');
+app.use(api);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

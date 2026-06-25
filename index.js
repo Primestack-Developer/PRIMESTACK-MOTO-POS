@@ -156,10 +156,14 @@ const getStripe = () => {
 
 // ─── Security Middleware ──────────────────────────────────────────────────────
 
-// 1. Helmet — sets secure HTTP headers
+// 1. Helmet — sets secure HTTP headers, but more permissive for static assets
 app.use(helmet({
   contentSecurityPolicy: false, // disabled so Stripe iframe works
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  frameguard: false,
+  hsts: false
 }))
 
 // 2. CORS — only allow known origins
