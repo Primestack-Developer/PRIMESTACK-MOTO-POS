@@ -91,7 +91,7 @@ async function getMerchantById(req, res) {
   if (!merchant) {
     return res.status(404).json({ error: 'Merchant not found' });
   }
-  res.json(merchant);
+  res.json({ merchant });
 }
 
 async function getPOSDevices(req, res) {
@@ -313,7 +313,7 @@ async function getSystemAnnouncements(req, res) {
   const announcements = await prisma.adminNotification.findMany({
     orderBy: { createdAt: 'desc' }
   });
-  res.json(announcements);
+  res.json({ announcements });
 }
 
 async function getAdminNotifications(req, res) {
@@ -321,7 +321,7 @@ async function getAdminNotifications(req, res) {
     where: { read: false },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(notifications);
+  res.json({ notifications });
 }
 
 async function markNotificationRead(req, res) {
@@ -361,7 +361,7 @@ async function getChatMessages(req, res) {
     where: { merchantId },
     orderBy: { createdAt: 'asc' }
   });
-  res.json(messages);
+  res.json({ messages });
 }
 
 async function sendChatMessage(req, res) {
@@ -370,7 +370,7 @@ async function sendChatMessage(req, res) {
   const chat = await prisma.chatMessage.create({
     data: { merchantId, sender: 'admin', message }
   });
-  res.json(chat);
+  res.json({ chat });
 }
 
 async function getMerchantsForChat(req, res) {
@@ -387,6 +387,48 @@ async function getMerchantsForChat(req, res) {
     }
   });
   res.json({ conversations: merchants });
+}
+
+async function getCustomerVerificationRequests(req, res) {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const [requests, total] = await Promise.all([
+    prisma.customerVerification.findMany({
+      include: { customer: true, merchant: true },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.customerVerification.count()
+  ]);
+  res.json({ requests, total, page, limit, totalPages: Math.ceil(total / limit) });
+}
+
+async function updateCustomerVerificationStatus(req, res) {
+  const { id } = req.params;
+  const { status, notes } = req.body;
+  const verification = await prisma.customerVerification.update({
+    where: { id },
+    data: { 
+      status,
+      notes,
+      reviewedBy: req.user.id,
+      reviewedAt: new Date() 
+    },
+    include: { customer: true, merchant: true }
+  });
+  // Create notification for the merchant
+  await prisma.merchantNotification.create({
+    data: {
+      merchantId: verification.merchantId,
+      type: 'VERIFICATION_STATUS',
+      title: `Customer Verification ${status}`,
+      message: `Customer ${verification.customer.name}'s verification has been ${status}`
+    }
+  });
+  res.json(verification);
 }
 
 module.exports = {
@@ -416,5 +458,7 @@ module.exports = {
   updateSystemStatus,
   getChatMessages,
   sendChatMessage,
-  getMerchantsForChat
+  getMerchantsForChat,
+  getCustomerVerificationRequests,
+  updateCustomerVerificationStatus
 };

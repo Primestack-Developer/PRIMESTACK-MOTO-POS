@@ -38,6 +38,7 @@ router.get('/notifications', authenticateToken, requireMerchant, getNotification
 router.put('/notifications/:id/read', authenticateToken, requireMerchant, markNotificationRead);
 router.get('/verification-requests', authenticateToken, requireMerchant, getVerificationRequests);
 router.post('/verification-requests', authenticateToken, requireMerchant, submitVerificationRequest);
+router.post('/customers/:id/verify', authenticateToken, requireMerchant, submitVerificationRequest);
 router.get('/chat', authenticateToken, requireMerchant, getChatMessages);
 router.post('/chat', authenticateToken, requireMerchant, sendChatMessage);
 

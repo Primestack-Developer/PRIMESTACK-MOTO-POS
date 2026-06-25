@@ -88,7 +88,7 @@ async function getPOSDevices(req, res) {
     include: { deviceLogs: true },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(devices);
+  res.json({ posDevices: devices });
 }
 
 async function createPOSDevice(req, res) {
@@ -99,7 +99,7 @@ async function createPOSDevice(req, res) {
       req.body.deviceModel,
       req.body.deviceSerial
     );
-    res.json({ success: true, device });
+    res.json({ success: true, pos_id: device.posId, activation_code: device.activationCode });
   } catch (error) {
     logger.error('Failed to create POS device', { error: error.message });
     res.status(500).json({ error: error.message });
@@ -113,7 +113,7 @@ async function getCustomers(req, res) {
     include: { orders: true, verification: true },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(customers);
+  res.json({ customers });
 }
 
 async function createCustomer(req, res) {
@@ -127,7 +127,7 @@ async function createCustomer(req, res) {
       billingAddress: req.body.billingAddress
     }
   });
-  res.json(customer);
+  res.json({ customer });
 }
 
 async function getOrders(req, res) {
@@ -160,7 +160,7 @@ async function getOrderById(req, res) {
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
-  res.json(order);
+  res.json({ order });
 }
 
 async function createOrder(req, res) {
@@ -192,7 +192,7 @@ async function completeOrder(req, res) {
     data: { status: 'completed' },
     include: { payment: true }
   });
-  res.json(order);
+  res.json({ order });
 }
 
 async function cancelOrder(req, res) {
@@ -202,7 +202,7 @@ async function cancelOrder(req, res) {
     where: { id, merchantId },
     data: { status: 'canceled' }
   });
-  res.json(order);
+  res.json({ order });
 }
 
 async function getTransactions(req, res) {
@@ -212,7 +212,7 @@ async function getTransactions(req, res) {
     include: { posDevice: true },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(transactions);
+  res.json({ transactions });
 }
 
 async function getNotifications(req, res) {
@@ -221,7 +221,7 @@ async function getNotifications(req, res) {
     where: { merchantId },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(notifications);
+  res.json({ notifications });
 }
 
 async function markNotificationRead(req, res) {
@@ -241,21 +241,32 @@ async function getVerificationRequests(req, res) {
     include: { customer: true },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(requests);
+  res.json({ verificationRequests: requests });
 }
 
 async function submitVerificationRequest(req, res) {
   const merchantId = req.user.id;
-  const { customerId, documentUrls, notes } = req.body;
+  const { id } = req.params;
+  const { documents, notes } = req.body;
   const request = await prisma.customerVerification.create({
     data: {
-      customerId,
+      customerId: id,
       merchantId,
-      documentUrls: JSON.stringify(documentUrls),
+      documentUrls: JSON.stringify(documents),
       notes
+    },
+    include: { customer: true }
+  });
+  // Create an admin notification
+  await prisma.adminNotification.create({
+    data: {
+      type: 'NEW_VERIFICATION_REQUEST',
+      title: 'New Customer Verification Request',
+      message: `${req.user.businessName} submitted a verification request for customer ${request.customer.name}`,
+      data: JSON.stringify({ verificationId: request.id })
     }
   });
-  res.json(request);
+  res.json({ verificationId: request.id });
 }
 
 async function getChatMessages(req, res) {
