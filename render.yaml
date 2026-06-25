@@ -21,3 +21,9 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: ADMIN_URL
+        value: https://primestack-moto-pos-mwfy.onrender.com/
+      - key: MERCHANT_URL
+        value: https://primestack-moto-pos-mwfy.onrender.com/
+      - key: POS_URL
+        value: https://primestack-moto-pos-mwfy.onrender.com/
