@@ -136,7 +136,7 @@ model ChatMessage {
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 }
 
 model Dispute {
