@@ -112,7 +112,7 @@ async function getOrders(req, res) {
 
 async function getTransactions(req, res) {
   const transactions = await prisma.transaction.findMany({
-    include: { merchant: true, posDevice: true },
+    include: { merchant: true, posDevice: true, refunds: true },
     orderBy: { createdAt: 'desc' }
   });
   res.json({ transactions });

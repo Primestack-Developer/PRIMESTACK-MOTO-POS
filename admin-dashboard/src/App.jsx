@@ -49,8 +49,7 @@ const NAV_ITEMS = [
   { id:'dashboard',    label:'Dashboard',    icon:'▦' },
   { id:'merchants',    label:'Merchants',    icon:'🏪' },
   { id:'pos-devices',  label:'POS Devices',  icon:'🖥' },
-  { id:'payments',     label:'Payments',     icon:'💳' },
-  { id:'transactions', label:'Transactions', icon:'📊' },
+  { id:'transactions', label:'Transactions', icon:'�' },
   { id:'disputes',     label:'Disputes',     icon:'⚠' },
   { id:'verifications',label:'Verifications',icon:'🔍' },
   { id:'webhooks',     label:'Webhooks',     icon:'🔔' },
@@ -114,6 +113,7 @@ export default function App() {
   const [selMerchant, setSelMerchant] = useState(null)
   const [selPos,      setSelPos]      = useState(null)
   const [selPayment,  setSelPayment]  = useState(null)
+  const [selTransaction, setSelTransaction] = useState(null)
   const [selWebhook,  setSelWebhook]  = useState(null)
   const [filterMerchantId, setFilterMerchantId] = useState(null)
   const [systemOnline, setSystemOnline] = useState(true)
@@ -189,7 +189,7 @@ export default function App() {
     fetchJSON(`${API}/admin/fraud-flags`,  H, d => d.fraudFlags && setFraudFlags(d.fraudFlags))
   }
 
-  // Poll notifications and chat conversations every 2 seconds for real-time updates
+  // Poll notifications, transactions, and chat conversations every 2 seconds for real-time updates
   useEffect(() => {
     if (!token) return
     const interval = setInterval(async () => {
@@ -206,6 +206,13 @@ export default function App() {
             }
             return notifD.notifications
           })
+        }
+
+        // Poll transactions
+        const txR = await fetch(`${API}/admin/transactions`, { headers: H })
+        const txD = await txR.json()
+        if (txD.transactions) {
+          setTransactions(txD.transactions)
         }
 
         // Poll chat conversations
@@ -992,11 +999,11 @@ export default function App() {
               </div>
             )}
 
-            {/* ══ PAYMENTS ══ */}
-            {tab==='payments' && !selPayment && (
+            {/* ══ TRANSACTIONS ══ */}
+            {tab==='transactions' && !selTransaction && (
               <div>
-                <PgHead title={filterLabel ? `Payments — ${filterLabel.businessName||filterLabel.name}` : 'All Payments'}
-                  sub={`${filteredOrders.length} transactions · $${filteredOrders.filter(o=>o.status==='paid').reduce((a,o)=>a+(o.amount||0),0).toFixed(2)} total`}
+                <PgHead title={filterLabel ? `Transactions — ${filterLabel.businessName||filterLabel.name}` : 'All Transactions'}
+                  sub={`${transactions.length} total · $${transactions.filter(t=>t.status==='SUCCESS'||t.status==='paid').reduce((a,t)=>a+(t.amount||0),0).toFixed(2)} volume`}
                   action={
                     <div style={{display:'flex',gap:'0.5rem'}}>
                       {filterMerchantId && <button className="lift-sm" style={BTNS} onClick={()=>setFilterMerchantId(null)}>✕ Clear Filter</button>}
@@ -1009,127 +1016,64 @@ export default function App() {
                   </div>
                 )}
                 <WCard>
-                  <Tbl heads={['Order ID','Merchant','Amount','POS ID','Status','Date']}
-                    rows={filteredOrders.map(o=>[
-                      <span style={{fontWeight:'700',color:C.accent}}>{o.orderId}</span>,
-                      o.merchant?.businessName||o.merchant?.name||'Unknown',
-                      <span style={{fontWeight:'700'}}>{o.currency} {o.amount.toFixed(2)}</span>,
-                      o.posDevice?.posId||'N/A', <Bdg s={o.status}/>,
-                      new Date(o.createdAt).toLocaleDateString()
-                    ])}
-                    onRow={i=>setSelPayment(filteredOrders[i])} empty="No payments found" />
-                </WCard>
-              </div>
-            )}
-
-            {/* ══ PAYMENT DETAIL ══ */}
-            {tab==='payments' && selPayment && (
-              <div style={{maxWidth:'680px'}}>
-                <Back onClick={()=>setSelPayment(null)} label="Back to Payments"/>
-
-                {/* Payment Info */}
-                <WCard title="Payment Details">
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.875rem',marginBottom:'0.5rem'}}>
-                    {[['Order ID',selPayment.orderId],
-                      ['Merchant',selPayment.merchant?.businessName||'Unknown'],
-                      ['Amount',`${selPayment.currency} ${selPayment.amount.toFixed(2)}`],
-                      ['POS',selPayment.posDevice?.posId||'N/A'],
-                      ['Date',new Date(selPayment.createdAt).toLocaleString()],
-                      ...(selPayment.payment?.cardBrand?[['Card',`${selPayment.payment.cardBrand.toUpperCase()} •••• ${selPayment.payment.cardLast4}`]]:[]),
-                      ...(selPayment.payment?.cardholderName?[['Cardholder Name',selPayment.payment.cardholderName]]:[]),
-                      ...(selPayment.expectedCardholder?[['Expected Name',selPayment.expectedCardholder]]:[]),
-                      ...(selPayment.payment?.riskLevel?[['Risk Level',cap(selPayment.payment.riskLevel)]]:[]),
-                    ].map(([k,v])=><InfoBox key={k} k={k} v={v}/>)}
-                    <div style={{background:C.accentLight,borderRadius:'10px',padding:'0.875rem'}}>
-                      <p style={{fontSize:'0.7rem',color:C.accent,fontWeight:'700',textTransform:'uppercase',letterSpacing:'0.05em',margin:'0 0 0.25rem'}}>Status</p>
-                      <Bdg s={selPayment.status}/>
-                    </div>
-                  </div>
-                  {selPayment.payment?.receiptUrl && (
-                    <a href={selPayment.payment.receiptUrl} target="_blank" rel="noreferrer"
-                      style={{display:'inline-flex',alignItems:'center',gap:'0.375rem',padding:'0.5rem 1rem',background:C.accentLight,color:C.accentDark,borderRadius:'8px',fontSize:'0.8rem',fontWeight:'700',textDecoration:'none',marginTop:'0.5rem'}}>
-                      📄 View Receipt
-                    </a>
-                  )}
-                </WCard>
-
-                {/* Customer Info */}
-                {selPayment.customer ? (
-                  <WCard title="Customer Details">
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.875rem',marginBottom:'1rem'}}>
-                      {[['Name',selPayment.customer.name],
-                        ['Email',selPayment.customer.email||'—'],
-                        ['Phone',selPayment.customer.phone||'—'],
-                        ['Billing Address',selPayment.customer.billingAddress||'—'],
-                      ].map(([k,v])=><InfoBox key={k} k={k} v={v}/>)}
-                    </div>
-
-                    {/* Verification status */}
-                    {selPayment.customer.verification ? (
-                      <div>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.875rem'}}>
-                          <p style={{fontSize:'0.8rem',fontWeight:'700',color:C.text,margin:0,textTransform:'uppercase',letterSpacing:'0.05em'}}>Verification Status</p>
-                          <Bdg s={selPayment.customer.verification.status==='approved'?'active':selPayment.customer.verification.status==='rejected'?'failed':'pending'}/>
-                        </div>
-
-                        {/* Documents */}
-                        {(() => {
-                          const docs = JSON.parse(selPayment.customer.verification.documentUrls||'[]')
-                          return docs.length > 0 ? (
-                            <div>
-                              <p style={{fontSize:'0.8rem',fontWeight:'700',color:C.text,margin:'0 0 0.625rem',textTransform:'uppercase',letterSpacing:'0.05em'}}>
-                                Verification Documents ({docs.length})
-                              </p>
-                              <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
-                                {docs.map((doc,i)=>(
-                                  <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:C.bg,padding:'0.75rem 1rem',borderRadius:'10px',border:`1px solid ${C.border}`}}>
-                                    <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                                      <span style={{fontSize:'1.1rem'}}>{doc.type?.includes('pdf')?'📄':doc.type?.includes('image')?'🖼':'📎'}</span>
-                                      <span style={{fontSize:'0.875rem',fontWeight:'600',color:C.textDark}}>{doc.name}</span>
-                                    </div>
-                                    <button onClick={()=>handleDownload(doc)}
-                                      style={{fontSize:'0.75rem',color:C.accent,fontWeight:'700',textDecoration:'none',padding:'0.25rem 0.75rem',background:C.accentLight,borderRadius:'6px',border:`1px solid ${C.accentMid}`,cursor:'pointer'}}>
-                                      Download
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : <p style={{fontSize:'0.875rem',color:C.textMuted}}>No documents uploaded yet</p>
-                        })()}
-                      </div>
-                    ) : (
-                      <div style={{background:'#fef3c7',borderRadius:'10px',padding:'0.875rem',border:'1px solid #fde68a'}}>
-                        <p style={{fontSize:'0.875rem',color:'#92400e',fontWeight:'600',margin:0}}>No verification submitted for this customer yet</p>
-                      </div>
-                    )}
-                  </WCard>
-                ) : (
-                  <WCard title="Customer Details">
-                    <p style={{color:C.textMuted,fontSize:'0.875rem',padding:'0.5rem 0'}}>Walk-in Customer — no registered customer data</p>
-                  </WCard>
-                )}
-              </div>
-            )}
-
-            {/* ══ TRANSACTIONS ══ */}
-            {tab==='transactions' && (
-              <div>
-                <PgHead title="All Transactions"
-                  sub={`${transactions.length} total · $${transactions.filter(t=>t.status==='SUCCESS').reduce((a,t)=>a+(t.amount||0),0).toFixed(2)} volume`} />
-                <WCard>
-                  <Tbl heads={['Transaction ID','Merchant','Amount','Card','Cardholder','Status','Date']}
-                    rows={transactions.map(t=>[
+                  <Tbl heads={['Transaction ID','Merchant','Amount','Card','Cardholder','POS','Status','Date']}
+                    rows={(filterMerchantId ? transactions.filter(t => t.merchantId === filterMerchantId) : transactions).map(t=>[
                       <span style={{fontWeight:'700',color:C.accent}}>{t.id.substring(0, 12)}...</span>,
                       t.merchant?.businessName||t.merchant?.name||'Unknown',
                       <span style={{fontWeight:'700'}}>{t.currency} {t.amount.toFixed(2)}</span>,
                       t.cardBrand ? `${t.cardBrand.toUpperCase()} •••• ${t.cardLast4}` : '—',
                       t.cardholderName || '—',
+                      t.posDevice?.posId || '—',
                       <Bdg s={t.status.toLowerCase()}/>,
                       new Date(t.createdAt).toLocaleString()
                     ])}
+                    onRow={i=>setSelTransaction((filterMerchantId ? transactions.filter(t => t.merchantId === filterMerchantId) : transactions)[i])}
                     empty="No transactions yet" />
                 </WCard>
+              </div>
+            )}
+
+            {/* ══ TRANSACTION DETAIL ══ */}
+            {tab==='transactions' && selTransaction && (
+              <div style={{maxWidth:'680px'}}>
+                <Back onClick={()=>setSelTransaction(null)} label="Back to Transactions"/>
+
+                {/* Transaction Info */}
+                <WCard title="Transaction Details">
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.875rem',marginBottom:'0.5rem'}}>
+                    {[['Transaction ID',selTransaction.id],
+                      ['Merchant',selTransaction.merchant?.businessName||selTransaction.merchant?.name||'Unknown'],
+                      ['Amount',`${selTransaction.currency} ${selTransaction.amount.toFixed(2)}`],
+                      ['POS',selTransaction.posDevice?.posId||'N/A'],
+                      ['Date',new Date(selTransaction.createdAt).toLocaleString()],
+                      ...(selTransaction.cardBrand?[['Card',`${selTransaction.cardBrand.toUpperCase()} •••• ${selTransaction.cardLast4}`]]:[]),
+                      ...(selTransaction.cardholderName?[['Cardholder Name',selTransaction.cardholderName]]:[]),
+                      ...(selTransaction.customerName?[['Customer Name',selTransaction.customerName]]:[]),
+                      ...(selTransaction.customerEmail?[['Customer Email',selTransaction.customerEmail]]:[]),
+                      ...(selTransaction.riskLevel?[['Risk Level',cap(selTransaction.riskLevel)]]:[]),
+                      ...(selTransaction.stripePaymentIntentId?[['Stripe Payment Intent',selTransaction.stripePaymentIntentId]]:[]),
+                      ...(selTransaction.stripeChargeId?[['Stripe Charge',selTransaction.stripeChargeId]]:[]),
+                    ].map(([k,v])=><InfoBox key={k} k={k} v={v}/>)}
+                    <div style={{background:C.accentLight,borderRadius:'10px',padding:'0.875rem'}}>
+                      <p style={{fontSize:'0.7rem',color:C.accent,fontWeight:'700',textTransform:'uppercase',letterSpacing:'0.05em',margin:'0 0 0.25rem'}}>Status</p>
+                      <Bdg s={selTransaction.status.toLowerCase()}/>
+                    </div>
+                  </div>
+                </WCard>
+
+                {/* Refunds */}
+                {selTransaction.refunds && selTransaction.refunds.length > 0 && (
+                  <WCard title="Refunds">
+                    <Tbl heads={['Amount','Status','Reason','Date']}
+                      rows={selTransaction.refunds.map(r=>[
+                        `${r.currency} ${r.amount.toFixed(2)}`,
+                        <Bdg s={r.status}/>,
+                        r.reason || '—',
+                        new Date(r.createdAt).toLocaleString()
+                      ])}
+                      empty="No refunds" />
+                  </WCard>
+                )}
               </div>
             )}
 
