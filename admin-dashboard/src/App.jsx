@@ -473,6 +473,34 @@ export default function App() {
     a.click()
   }
 
+  const handleDownload = (doc) => {
+    try {
+      // Convert base64 to blob
+      const base64Data = doc.base64.split(',')[1];
+      const byteString = atob(base64Data);
+      const mimeString = doc.base64.split(',')[0].split(':')[1].split(';')[0];
+      
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([ab], { type: mimeString });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.name;
+      a.click();
+      
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Download failed:', e);
+    }
+  }
+
   const navTo = t => {
     setTab(t)
     setSelMerchant(null); setSelPos(null); setSelPayment(null); setSelWebhook(null)
@@ -1059,10 +1087,10 @@ export default function App() {
                                       <span style={{fontSize:'1.1rem'}}>{doc.type?.includes('pdf')?'📄':doc.type?.includes('image')?'🖼':'📎'}</span>
                                       <span style={{fontSize:'0.875rem',fontWeight:'600',color:C.textDark}}>{doc.name}</span>
                                     </div>
-                                    <a href={doc.base64} download={doc.name}
-                                      style={{fontSize:'0.75rem',color:C.accent,fontWeight:'700',textDecoration:'none',padding:'0.25rem 0.75rem',background:C.accentLight,borderRadius:'6px',border:`1px solid ${C.accentMid}`}}>
+                                    <button onClick={()=>handleDownload(doc)}
+                                      style={{fontSize:'0.75rem',color:C.accent,fontWeight:'700',textDecoration:'none',padding:'0.25rem 0.75rem',background:C.accentLight,borderRadius:'6px',border:`1px solid ${C.accentMid}`,cursor:'pointer'}}>
                                       Download
-                                    </a>
+                                    </button>
                                   </div>
                                 ))}
                               </div>
@@ -1259,10 +1287,10 @@ export default function App() {
                     {JSON.parse(selVerif.documentUrls||'[]').map((doc,i)=>(
                       <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:C.bg,padding:'0.75rem 1rem',borderRadius:'10px',border:`1px solid ${C.border}`}}>
                         <span style={{fontSize:'0.875rem',fontWeight:'600',color:C.textDark}}>📎 {doc.name}</span>
-                        <a href={doc.base64} download={doc.name}
-                          style={{fontSize:'0.75rem',color:C.accent,fontWeight:'700',textDecoration:'none',padding:'0.25rem 0.75rem',background:C.accentLight,borderRadius:'6px'}}>
+                        <button onClick={()=>handleDownload(doc)}
+                          style={{fontSize:'0.75rem',color:C.accent,fontWeight:'700',textDecoration:'none',padding:'0.25rem 0.75rem',background:C.accentLight,borderRadius:'6px',cursor:'pointer',border:'none'}}>
                           Download
-                        </a>
+                        </button>
                       </div>
                     ))}
                   </div>
