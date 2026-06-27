@@ -105,8 +105,13 @@ class PaymentService {
         customer: stripeCustomerId,
         description,
         confirm: true,
-        off_session: true,
         capture_method: 'manual',
+        payment_method_types: ['card'],
+        payment_method_options: {
+          card: {
+            moto: 'yes'
+          }
+        },
         metadata: {
           merchantId,
           posId,
