@@ -166,24 +166,31 @@ class PaymentService {
         }
       });
 
+      let finalIntent = paymentIntent;
+
       if (paymentIntent.status === 'requires_confirmation') {
         const confirmedIntent = await stripe.paymentIntents.confirm(paymentIntent.id);
-        await this.handlePaymentIntent(confirmedIntent);
-        return {
-          success: true,
-          status: confirmedIntent.status,
-          orderId: order.orderId,
-          paymentIntentId: confirmedIntent.id
-        };
-      } else if (paymentIntent.status === 'succeeded') {
-        await this.handlePaymentIntent(paymentIntent);
+        finalIntent = confirmedIntent;
       }
+
+      if (finalIntent.status === 'requires_capture') {
+        finalIntent = await stripe.paymentIntents.capture(finalIntent.id);
+      }
+
+      if (finalIntent.status === 'succeeded' || finalIntent.status === 'processing' || finalIntent.status === 'requires_payment_method' || finalIntent.status === 'canceled') {
+        await this.handlePaymentIntent(finalIntent);
+      }
+
+      const finalCharge = finalIntent.charges?.data[0];
 
       return {
         success: true,
-        status: paymentIntent.status,
+        status: finalIntent.status,
         orderId: order.orderId,
-        paymentIntentId: paymentIntent.id
+        paymentIntentId: finalIntent.id,
+        cardBrand: finalCharge?.payment_method_details?.card?.brand || charge?.payment_method_details?.card?.brand || null,
+        cardLast4: finalCharge?.payment_method_details?.card?.last4 || charge?.payment_method_details?.card?.last4 || null,
+        cardholderName: finalCharge?.billing_details?.name || cardholderName
       };
     } catch (error) {
       logger.error('Failed to process MOTO payment', { error: error.message });

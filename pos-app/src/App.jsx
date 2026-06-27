@@ -110,6 +110,7 @@ export default function App() {
   const [curOrder, setCurOrder] = useState(null)
   const [linkOpened, setLinkOpened] = useState(false)
   const [pd, setPd] = useState({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
+  const [card, setCard] = useState({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
   const [newCust, setNewCust]     = useState({ name: '', email: '', phone: '', billingAddress: '' })
 
   const token = creds ? creds.api_token : null;
@@ -237,7 +238,7 @@ export default function App() {
     try {
       const r = await fetch(API + '/pos/customers', { headers: AH })
       const d = await r.json()
-      if (d.customers) setCustomers(d.customers)
+      setCustomers(Array.isArray(d) ? d : (d.customers || []))
     } catch (e) { console.error(e) }
   }
 
@@ -245,7 +246,7 @@ export default function App() {
     try {
       const r = await fetch(API + '/pos/orders', { headers: AH })
       const d = await r.json()
-      if (d.orders) setOrders(d.orders)
+      setOrders(Array.isArray(d) ? d : (d.orders || []))
     } catch (e) { console.error(e) }
   }
 
@@ -303,10 +304,12 @@ export default function App() {
     try {
       const r = await fetch(API + '/pos/customers', { method: 'POST', headers: AH, body: JSON.stringify(newCust) })
       const d = await r.json()
-      if (d.customer) {
+      const customer = d.customer || d
+      if (customer?.id) {
         setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
         await loadCustomers()
-        setPd({ ...pd, customerId: d.customer.id, customerName: d.customer.name })
+        setPd({ ...pd, customerId: customer.id, customerName: customer.name })
+        setCard(prev => ({ ...prev, cardholderName: customer.name || prev.cardholderName }))
         setView('customer-selection')
       }
     } catch (e) { console.error(e) }
@@ -317,21 +320,64 @@ export default function App() {
     setLoading(true)
     setLinkOpened(false)
     try {
-      const cents = Math.round(parseFloat(pd.amount) * 100)
-      const body = JSON.stringify({ amount: cents, currency: 'usd', description: pd.description, customer_id: pd.customerId || null, customer_name: pd.customerId ? pd.customerName : null })
-      const r = await fetch(API + '/pos/moto/orders', { method: 'POST', headers: AH, body })
+      const amount = parseFloat(pd.amount)
+      const cardNumber = card.cardNumber.replace(/\D/g, '')
+      const cardExpiry = card.cardExpiry.replace(/\s/g, '')
+      const cardCvc = card.cardCvc.replace(/\D/g, '')
+      const cardholderName = card.cardholderName.trim()
+
+      if (!amount || amount <= 0) {
+        setMsg('Enter a valid amount')
+        setLoading(false)
+        return
+      }
+      if (!cardholderName || cardNumber.length < 12 || cardExpiry.length !== 5 || cardCvc.length < 3) {
+        setMsg('Enter valid card details to continue')
+        setLoading(false)
+        return
+      }
+
+      const body = JSON.stringify({
+        amount,
+        currency: 'USD',
+        description: pd.description || null,
+        customerId: pd.customerId || null,
+        cardholderName,
+        cardNumber,
+        cardExpiry,
+        cardCvc
+      })
+      const r = await fetch(API + '/pos/moto-payment', { method: 'POST', headers: AH, body })
       const d = await r.json()
-      if (d.card_entry_url) {
-        setCurOrder(d)
-        window.open(d.card_entry_url, '_blank')
-        startPolling(d.order_id)
-        setView('processing')
+
+      if (!r.ok || d.error) {
+        playFailureSound()
+        setMsg(d.error || d.message || 'Payment failed')
+        setView('failed')
+      } else if (d.success) {
+        const order = {
+          orderId: d.orderId || d.order_id,
+          paymentIntentId: d.paymentIntentId,
+          payment: (d.cardBrand || d.cardLast4) ? {
+            cardBrand: d.cardBrand,
+            cardLast4: d.cardLast4
+          } : null
+        }
+        setMsg('')
+        setCurOrder(order)
+        await loadOrders()
+        playSuccessSound()
+        setView('success')
       } else {
+        playFailureSound()
         setMsg(d.message || d.error || 'Failed to create order')
+        setView('failed')
         setTimeout(() => setMsg(''), 5000)
       }
     } catch (e) {
+      playFailureSound()
       setMsg('Error creating order')
+      setView('failed')
       setTimeout(() => setMsg(''), 5000)
     }
     setLoading(false)
@@ -366,14 +412,23 @@ export default function App() {
 
   const doReset = () => {
     setPd({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
+    setCard({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
     setCurOrder(null)
     setLinkOpened(false)
+    setMsg('')
     setView('home')
   }
 
   const selectCust = (c) => {
     setPd({ ...pd, customerId: c ? c.id : '', customerName: c ? c.name : 'Walk-in Customer' })
+    setCard(prev => ({ ...prev, cardholderName: c?.name || prev.cardholderName }))
     setView('confirm-payment')
+  }
+
+  const formatCardNumber = (value) => value.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim()
+  const formatExpiry = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 4)
+    return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits
   }
 
   const doPrint = (order, payment, amount, custName, desc) => {
@@ -680,6 +735,12 @@ export default function App() {
             <InfoRow k="Type" v="MOTO (Card Not Present)" />
           </div>
 
+          {msg && (
+            <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.85rem 1rem', borderRadius: '12px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: '600' }}>
+              {msg}
+            </div>
+          )}
+
           {/* Option A — Name confirmation warning */}
           {pd.customerId && (
             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '12px', padding: '1rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
@@ -700,8 +761,63 @@ export default function App() {
             </div>
           )}
 
+          <div className="info-box" style={{ marginTop: '1rem' }}>
+            <p style={{ fontSize: '0.72rem', color: '#c8a870', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', fontFamily: 'DM Mono, monospace' }}>
+              Enter Card Details
+            </p>
+            <div className="fg">
+              <label className="lbl">Cardholder Name</label>
+              <input
+                className="inp"
+                type="text"
+                value={card.cardholderName}
+                onChange={e => setCard({ ...card, cardholderName: e.target.value })}
+                placeholder="Name on card"
+                autoComplete="cc-name"
+              />
+            </div>
+            <div className="fg">
+              <label className="lbl">Card Number</label>
+              <input
+                className="inp"
+                type="text"
+                inputMode="numeric"
+                value={card.cardNumber}
+                onChange={e => setCard({ ...card, cardNumber: formatCardNumber(e.target.value) })}
+                placeholder="4242 4242 4242 4242"
+                autoComplete="cc-number"
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="fg" style={{ marginBottom: 0 }}>
+                <label className="lbl">Expiry</label>
+                <input
+                  className="inp"
+                  type="text"
+                  inputMode="numeric"
+                  value={card.cardExpiry}
+                  onChange={e => setCard({ ...card, cardExpiry: formatExpiry(e.target.value) })}
+                  placeholder="MM/YY"
+                  autoComplete="cc-exp"
+                />
+              </div>
+              <div className="fg" style={{ marginBottom: 0 }}>
+                <label className="lbl">CVC</label>
+                <input
+                  className="inp"
+                  type="password"
+                  inputMode="numeric"
+                  value={card.cardCvc}
+                  onChange={e => setCard({ ...card, cardCvc: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                  placeholder="CVC"
+                  autoComplete="cc-csc"
+                />
+              </div>
+            </div>
+          </div>
+
           <button onClick={doCreateOrder} className="g-btn lift" style={{ padding: '1.2rem', fontSize: '1.05rem', marginTop: '1rem' }} disabled={loading}>
-            {loading ? 'Creating Order...' : 'Start MOTO Payment'}
+            {loading ? 'Processing Payment...' : 'Start MOTO Payment'}
           </button>
         </div>
       </div>
@@ -786,7 +902,7 @@ export default function App() {
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ width: '72px', height: '72px', background: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1rem' }}>✗</div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#dc2626', marginBottom: '0.5rem' }}>Payment Failed</h2>
-          <p style={{ color: 'rgba(232,224,208,0.62)', marginBottom: '1.5rem' }}>The payment was declined or failed to process.</p>
+          <p style={{ color: 'rgba(232,224,208,0.62)', marginBottom: '1.5rem' }}>{msg || 'The payment was declined or failed to process.'}</p>
           <button onClick={() => setView('confirm-payment')} className="g-btn">Try Again</button>
           <button onClick={doReset} className="o-btn">New Payment</button>
         </div>
