@@ -86,20 +86,50 @@ export default function App() {
   })
   const [code, setCode]         = useState('')
   const [loading, setLoading]   = useState(false)
+  const [verifying, setVerifying] = useState(!!localStorage.getItem('posCredentials'))
   const [msg, setMsg]           = useState('')
-  const [view, setView]         = useState(() => localStorage.getItem('posCredentials') ? 'home' : 'activation')
+  const [view, setView]         = useState('activation')
   const [customers, setCustomers] = useState([])
-  const [orders, setOrders]       = useState([])
+  const [orders, setOrders]      = useState([])
   const [selOrder, setSelOrder]   = useState(null)
   const [pendingCreds, setPendingCreds] = useState(null)
   const [polling, setPolling]   = useState(false)
   const [curOrder, setCurOrder] = useState(null)
   const [linkOpened, setLinkOpened] = useState(false)
   const [pd, setPd] = useState({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
-  const [newCust, setNewCust]   = useState({ name: '', email: '', phone: '', billingAddress: '' })
+  const [newCust, setNewCust]     = useState({ name: '', email: '', phone: '', billingAddress: '' })
 
   const token = creds ? creds.api_token : null;
   const AH = token ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } : {};
+
+  // Verify stored credentials on app load
+  useEffect(() => {
+    if (!creds) {
+      setVerifying(false);
+      return;
+    }
+
+    const verifyCredentials = async () => {
+      try {
+        const res = await fetch(API + '/pos/customers', { headers: AH });
+        if (res.ok) {
+          setView('home');
+        } else {
+          // Invalid credentials - clear localStorage
+          localStorage.removeItem('posCredentials');
+          setCreds(null);
+          setView('activation');
+        }
+      } catch (e) {
+        // Network error, but let's still try to use cached credentials
+        setView('home');
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifyCredentials();
+  }, []);
 
   // Check device/merchant status periodically
   useEffect(() => {
@@ -330,6 +360,20 @@ export default function App() {
   }
 
   /* ── SCREENS ──────────────────────────────────────────────────────────────── */
+
+  if (verifying) return (
+    <>
+      <style>{G}</style>
+      <div className="scr">
+        <div className="card" style={{ textAlign: 'center' }}>
+          <Logo />
+          <h1 style={{ fontSize: '1.55rem', fontWeight: '600', color: '#e8e0d0', marginBottom: '0.25rem' }}>PrimeStack MOTO POS</h1>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '2rem', fontFamily: 'DM Mono, monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Verifying device...</p>
+          <div className="pulse" style={{ fontSize: '2rem' }}>⏳</div>
+        </div>
+      </div>
+    </>
+  )
 
   if (view === 'activation') return (
     <>

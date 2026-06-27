@@ -74,6 +74,7 @@ export default function App() {
   const [merchant, setMerchant] = useState(() => { try { const s=localStorage.getItem('merchantData'); return s?JSON.parse(s):null } catch(e){return null} })
   const [tab,      setTab]      = useState('dashboard')
   const [msg,      setMsg]      = useState(null)
+  const [verifying, setVerifying] = useState(!!localStorage.getItem('merchantToken'))
   const [loginEmail,    setLoginEmail]    = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [posDevices,  setPosDevices]  = useState([])
@@ -142,13 +143,41 @@ export default function App() {
   // Track previous unread counts
   const prevUnreadRef = React.useRef({ notifs: 0, chat: 0 })
 
+  // Verify stored credentials on app load
+  useEffect(() => {
+    if (!token) {
+      setVerifying(false);
+      return;
+    }
+
+    const verifyCredentials = async () => {
+      try {
+        const res = await fetch(`${API}/merchant/pos-devices`, { headers: H });
+        if (res.ok) {
+          load();
+        } else {
+          // Invalid credentials - clear localStorage
+          localStorage.removeItem('merchantToken');
+          localStorage.removeItem('merchantData');
+          setToken(null);
+          setMerchant(null);
+        }
+      } catch (e) {
+        // Network error, but let's still try to use cached credentials
+        load();
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifyCredentials();
+  }, []);
+
   useEffect(() => {
     if (merchant) {
       setProfile({ businessName:merchant.businessName||'', email:merchant.email||'', phone:merchant.phone||'', address:merchant.address||'', country:merchant.country||'' })
     }
   }, [merchant])
-
-  useEffect(() => { if (token) load() }, [token])
 
   const load = () => {
     // Check system status first
@@ -368,6 +397,21 @@ export default function App() {
   const totalRev = orders.filter(o=>o.status==='paid').reduce((a,o)=>a+(o.amount||0),0)
   const todayRev = orders.filter(o=>o.status==='paid'&&new Date(o.createdAt).toDateString()===new Date().toDateString()).reduce((a,o)=>a+(o.amount||0),0)
   const initials = (merchant?.businessName||merchant?.name||'M').charAt(0).toUpperCase()
+
+  // VERIFYING
+  if (verifying) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem',background:'radial-gradient(circle at top, rgba(200,168,112,0.12), transparent 30%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)'}}>
+        <div className="lift" style={{background:C.white,borderRadius:'28px',padding:'2.5rem',width:'100%',maxWidth:'420px',boxShadow:'0 30px 90px rgba(0,0,0,0.45)',border:`1px solid ${C.border}`,textAlign:'center'}}>
+          <img src="/logo.png" alt="Logo" style={{height:'52px',objectFit:'contain',marginBottom:'1rem'}} onError={e=>e.target.style.display='none'}/>
+          <h1 style={{fontSize:'1.8rem',fontWeight:'600',color:C.text,margin:0}}>Merchant Portal</h1>
+          <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 2rem',fontFamily:'DM Mono, monospace',letterSpacing:'0.08em',textTransform:'uppercase'}}>Verifying session...</p>
+          <div style={{fontSize:'3rem',animation:'pulse 1.5s ease-in-out infinite'}}>⏳</div>
+        </div>
+      </div>
+    </>
+  )
 
   // LOGIN
   if (!token) return (
