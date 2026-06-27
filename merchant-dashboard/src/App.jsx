@@ -4,11 +4,11 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const API = import.meta.env.VITE_API_URL || ''
 
 const C = {
-  sidebar:'#1a3a28', accent:'#16a34a', accentLight:'#dcfce7', accentMid:'#86efac',
-  accentDark:'#15803d', bg:'#f0fdf4', white:'#ffffff', border:'#d1fae5',
-  text:'#14532d', textDark:'#111827', textMuted:'#6b7280',
-  red:'#ef4444', redLight:'#fee2e2', yellow:'#f59e0b', yellowLight:'#fef3c7',
-  purple:'#8b5cf6', purpleLight:'#ede9fe', blue:'#3b82f6', blueLight:'#dbeafe',
+  sidebar:'#111318', accent:'#c8a870', accentLight:'rgba(200,168,112,0.12)', accentMid:'rgba(200,168,112,0.28)',
+  accentDark:'#f1e8d8', bg:'#0f0608', white:'#111318', border:'rgba(232,224,208,0.10)',
+  text:'#e8e0d0', textDark:'#f6efe1', textMuted:'rgba(232,224,208,0.62)',
+  red:'#d97b7b', redLight:'rgba(217,123,123,0.12)', yellow:'#d4aa55', yellowLight:'rgba(212,170,85,0.14)',
+  purple:'#9b7bbb', purpleLight:'rgba(155,123,187,0.14)', blue:'#7fa8c9', blueLight:'rgba(127,168,201,0.14)',
 }
 
 const NAV = [
@@ -22,13 +22,36 @@ const NAV = [
 const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
 const fmt = n => (n||0).toFixed(2)
 
-const CSS = `*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-.lift{transition:transform .18s,box-shadow .18s}.lift:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(22,163,74,.18)!important}
-.lsm{transition:transform .15s}.lsm:hover{transform:translateY(-2px)}
-.nb{transition:background .15s,transform .15s}.nb:hover{background:rgba(22,163,74,.15)!important;transform:translateX(3px)}
-.rh{transition:background .12s}.rh:hover{background:#f0fdf4!important;cursor:pointer}
-input:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.12);outline:none}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#86efac;border-radius:3px}`
+const CSS = `
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Cormorant',Georgia,serif;
+  color:${C.text};
+  background-color:${C.bg};
+  background-image:
+    repeating-linear-gradient(90deg,transparent 0,transparent 14px,rgba(255,255,255,.014) 14px,rgba(255,255,255,.014) 15px),
+    repeating-linear-gradient(89deg,transparent 0,transparent 32px,rgba(0,0,0,.11) 32px,rgba(0,0,0,.11) 34px),
+    linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%);
+}
+button,input,textarea,select{font:inherit}
+h1,h2,h3,h4,h5,h6{font-family:'Cormorant SC','Cormorant',serif;letter-spacing:.08em;font-weight:500}
+.lift{transition:transform .18s,box-shadow .18s}
+.lift:hover{transform:translateY(-3px);box-shadow:0 18px 38px rgba(0,0,0,.32)!important}
+.lsm{transition:transform .15s}
+.lsm:hover{transform:translateY(-2px)}
+.nb{transition:background .15s,transform .15s,color .15s}
+.nb:hover{background:rgba(200,168,112,.10)!important;transform:translateX(3px)}
+.rh{transition:background .12s}
+.rh:hover{background:rgba(200,168,112,.08)!important;cursor:pointer}
+input:focus,textarea:focus{
+  border-color:${C.accent}!important;
+  box-shadow:0 0 0 3px rgba(200,168,112,.12);
+  outline:none
+}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:${C.accent};border-radius:3px}
+`
 
 export class ErrorBoundary extends React.Component {
   state = { err: null }
@@ -350,21 +373,21 @@ export default function App() {
   if (!token) return (
     <>
       <style>{CSS}</style>
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#1a3a28,#2d6a4f)'}}>
-        <div className="lift" style={{background:C.white,borderRadius:'20px',padding:'2.5rem',width:'100%',maxWidth:'420px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem',background:'radial-gradient(circle at top, rgba(200,168,112,0.12), transparent 30%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)'}}>
+        <div className="lift" style={{background:C.white,borderRadius:'28px',padding:'2.5rem',width:'100%',maxWidth:'420px',boxShadow:'0 30px 90px rgba(0,0,0,0.45)',border:`1px solid ${C.border}`}}>
           <div style={{textAlign:'center',marginBottom:'2rem'}}>
             <img src="/logo.png" alt="Logo" style={{height:'52px',objectFit:'contain',marginBottom:'1rem'}} onError={e=>e.target.style.display='none'}/>
-            <h1 style={{fontSize:'1.5rem',fontWeight:'800',color:C.text,margin:0}}>Merchant Portal</h1>
-            <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 0'}}>Sign in to your dashboard</p>
+            <h1 style={{fontSize:'1.8rem',fontWeight:'600',color:C.text,margin:0}}>Merchant Portal</h1>
+            <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 0',fontFamily:'DM Mono, monospace',letterSpacing:'0.08em',textTransform:'uppercase'}}>Sign in to your dashboard</p>
           </div>
           {msg && <div style={{padding:'0.75rem',background:msg.t==='e'?C.redLight:C.accentLight,color:msg.t==='e'?C.red:C.accentDark,borderRadius:'10px',marginBottom:'1rem',fontSize:'0.875rem'}}>{msg.text}</div>}
           <form onSubmit={login}>
             <div style={{marginBottom:'1rem'}}>
-              <label style={{display:'block',fontSize:'0.8rem',fontWeight:'700',color:C.text,marginBottom:'0.375rem'}}>Email</label>
+              <label style={{display:'block',fontSize:'0.72rem',fontWeight:'500',color:C.textMuted,marginBottom:'0.375rem',fontFamily:'DM Mono, monospace',letterSpacing:'0.1em',textTransform:'uppercase'}}>Email</label>
               <input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} required style={INP} placeholder="merchant@email.com"/>
             </div>
             <div style={{marginBottom:'1.5rem'}}>
-              <label style={{display:'block',fontSize:'0.8rem',fontWeight:'700',color:C.text,marginBottom:'0.375rem'}}>Password</label>
+              <label style={{display:'block',fontSize:'0.72rem',fontWeight:'500',color:C.textMuted,marginBottom:'0.375rem',fontFamily:'DM Mono, monospace',letterSpacing:'0.1em',textTransform:'uppercase'}}>Password</label>
               <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} required style={INP} placeholder="••••••••"/>
             </div>
             <button type="submit" className="lift" style={{...BP,width:'100%',padding:'0.875rem',fontSize:'1rem'}}>Sign In</button>
@@ -378,17 +401,17 @@ export default function App() {
   if (token && !systemOnline) return (
     <>
       <style>{CSS}</style>
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#1a3a28,#2d6a4f)',padding:'2rem'}}>
-        <div style={{background:'white',borderRadius:'20px',padding:'2.5rem',width:'100%',maxWidth:'420px',textAlign:'center',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'radial-gradient(circle at top, rgba(200,168,112,0.12), transparent 30%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)',padding:'2rem'}}>
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:'28px',padding:'2.5rem',width:'100%',maxWidth:'420px',textAlign:'center',boxShadow:'0 30px 90px rgba(0,0,0,0.45)'}}>
           <div style={{fontSize:'4rem',marginBottom:'1rem'}}>🔴</div>
-          <h1 style={{fontSize:'1.5rem',fontWeight:'800',color:'#14532d',marginBottom:'0.5rem'}}>System Unavailable</h1>
+          <h1 style={{fontSize:'1.7rem',fontWeight:'600',color:C.text,marginBottom:'0.5rem'}}>System Unavailable</h1>
           <p style={{color:'#6b7280',fontSize:'0.95rem',marginBottom:'1.5rem',lineHeight:1.6}}>
             {systemMessage || 'The system is currently offline for maintenance. Please try again later.'}
           </p>
           <div style={{background:'#fef3c7',border:'1px solid #fde68a',borderRadius:'12px',padding:'1rem',marginBottom:'1.5rem'}}>
             <p style={{fontSize:'0.8rem',color:'#92400e',fontWeight:'600',margin:0}}>Your account and data are safe. The system will be back online shortly.</p>
           </div>
-          <button onClick={()=>load()} style={{width:'100%',padding:'0.875rem',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',border:'none',borderRadius:'12px',fontSize:'1rem',fontWeight:'700',cursor:'pointer'}}>
+          <button onClick={()=>load()} style={{width:'100%',padding:'0.875rem',background:`linear-gradient(135deg,${C.accent},#9f7c42)`,color:'#111318',border:'none',borderRadius:'12px',fontSize:'1rem',fontWeight:'700',cursor:'pointer'}}>
             Try Again
           </button>
           <button onClick={logout} style={{width:'100%',padding:'0.75rem',background:'none',color:'#6b7280',border:'none',fontSize:'0.875rem',cursor:'pointer',marginTop:'0.5rem'}}>
@@ -403,7 +426,7 @@ export default function App() {
   return (
     <>
       <style>{CSS}</style>
-      <div style={{display:'flex',minHeight:'100vh',background:C.bg}}>
+      <div style={{display:'flex',minHeight:'100vh',background:'radial-gradient(circle at top, rgba(200,168,112,0.1), transparent 20%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)'}}>
 
         {/* SIDEBAR */}
         <aside style={{width:'220px',background:C.sidebar,display:'flex',flexDirection:'column',position:'sticky',top:0,height:'100vh',flexShrink:0}}>
@@ -951,6 +974,6 @@ function PH({title,sub,action}){return <div style={{display:'flex',justifyConten
 function Back({onClick,label}){return <button onClick={onClick} className="lsm" style={{display:'flex',alignItems:'center',gap:'0.375rem',background:'none',border:'none',color:'#16a34a',cursor:'pointer',fontSize:'0.875rem',fontWeight:'600',padding:0,marginBottom:'1rem'}}>&#8592; {label}</button>}
 function Fld({l,children}){return <div style={{marginBottom:'1rem'}}><label style={{display:'block',fontSize:'0.8rem',fontWeight:'700',color:'#14532d',marginBottom:'0.375rem'}}>{l}</label>{children}</div>}
 
-const INP = {width:'100%',padding:'0.625rem 0.875rem',border:'1.5px solid #d1fae5',borderRadius:'10px',fontSize:'0.875rem',boxSizing:'border-box',color:'#111827',background:'#ffffff'}
-const BP  = {display:'inline-flex',alignItems:'center',gap:'0.375rem',padding:'0.625rem 1.25rem',background:'#16a34a',color:'white',border:'none',borderRadius:'10px',fontSize:'0.875rem',fontWeight:'700',cursor:'pointer'}
-const BS  = {display:'inline-flex',alignItems:'center',gap:'0.375rem',padding:'0.625rem 1.25rem',background:'#ffffff',color:'#111827',border:'1.5px solid #d1fae5',borderRadius:'10px',fontSize:'0.875rem',fontWeight:'600',cursor:'pointer'}
+const INP = {width:'100%',padding:'0.625rem 0.875rem',border:`1.5px solid ${C.border}`,borderRadius:'10px',fontSize:'0.875rem',boxSizing:'border-box',color:C.textDark,background:C.white}
+const BP  = {display:'inline-flex',alignItems:'center',gap:'0.375rem',padding:'0.625rem 1.25rem',background:`linear-gradient(135deg,${C.accent},#9f7c42)`,color:'#111318',border:'none',borderRadius:'10px',fontSize:'0.875rem',fontWeight:'700',cursor:'pointer'}
+const BS  = {display:'inline-flex',alignItems:'center',gap:'0.375rem',padding:'0.625rem 1.25rem',background:C.white,color:C.textDark,border:`1.5px solid ${C.border}`,borderRadius:'10px',fontSize:'0.875rem',fontWeight:'600',cursor:'pointer'}

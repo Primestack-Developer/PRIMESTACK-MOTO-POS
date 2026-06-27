@@ -5,36 +5,48 @@ const API = import.meta.env.VITE_API_URL || ''
 /* ── Global CSS ─────────────────────────────────────────────────────────────── */
 const G = `
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f0fdf4; min-height:100dvh; overscroll-behavior:none; -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Cormorant',Georgia,serif;
+    background-color:#0f0608;
+    background-image:
+      repeating-linear-gradient(90deg,transparent 0,transparent 14px,rgba(255,255,255,.014) 14px,rgba(255,255,255,.014) 15px),
+      repeating-linear-gradient(89deg,transparent 0,transparent 32px,rgba(0,0,0,.11) 32px,rgba(0,0,0,.11) 34px),
+      linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%);
+    color:#e8e0d0;
+    min-height:100dvh;
+    overscroll-behavior:none;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,textarea,select{font:inherit}
   .scr { max-width:480px; margin:0 auto; padding:1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom)); min-height:100dvh; display:flex; flex-direction:column; justify-content:center; }
   .scr-top { justify-content:flex-start; padding-top:1.25rem; }
-  .card { background:#fff; border-radius:20px; padding:1.75rem; box-shadow:0 4px 24px rgba(22,163,74,0.12); border:1px solid #d1fae5; }
+  .card { background:#111318; border-radius:24px; padding:1.75rem; box-shadow:0 20px 48px rgba(0,0,0,.34); border:1px solid rgba(232,224,208,.10); }
   .lift { transition:transform .18s,box-shadow .18s; }
   .lift:active { transform:scale(0.97); }
-  .lift:hover { transform:translateY(-3px); box-shadow:0 10px 32px rgba(22,163,74,0.22)!important; }
+  .lift:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(0,0,0,.38)!important; }
   .sm { transition:transform .15s; }
   .sm:active { transform:scale(0.97); }
   .rh { transition:background .12s; cursor:pointer; }
-  .rh:active { background:#e0f7e9!important; }
-  .g-btn { width:100%; padding:1.1rem; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:16px; font-size:1.05rem; font-weight:700; cursor:pointer; margin-top:0.5rem; box-shadow:0 4px 14px rgba(22,163,74,0.35); transition:transform .15s; min-height:52px; }
+  .rh:active { background:rgba(200,168,112,.10)!important; }
+  .g-btn { width:100%; padding:1.1rem; background:linear-gradient(135deg,#c8a870,#9f7c42); color:#111318; border:none; border-radius:16px; font-size:1.05rem; font-weight:700; cursor:pointer; margin-top:0.5rem; box-shadow:0 8px 24px rgba(200,168,112,.18); transition:transform .15s; min-height:52px; }
   .g-btn:active { transform:scale(0.97); }
   .g-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-  .o-btn { width:100%; padding:0.875rem; background:#fff; color:#14532d; border:1.5px solid #d1fae5; border-radius:14px; font-size:0.95rem; font-weight:600; cursor:pointer; margin-top:0.5rem; transition:transform .15s,background .15s; }
-  .o-btn:hover { transform:translateY(-2px); background:#f0fdf4; }
+  .o-btn { width:100%; padding:0.875rem; background:#111318; color:#e8e0d0; border:1.5px solid rgba(232,224,208,.10); border-radius:14px; font-size:0.95rem; font-weight:600; cursor:pointer; margin-top:0.5rem; transition:transform .15s,background .15s; }
+  .o-btn:hover { transform:translateY(-2px); background:rgba(255,255,255,.04); }
   .r-btn { width:100%; padding:0.875rem; background:#ef4444; color:#fff; border:none; border-radius:14px; font-size:0.95rem; font-weight:700; cursor:pointer; margin-top:0.5rem; }
-  .inp { width:100%; padding:0.875rem 1rem; border:1.5px solid #d1fae5; border-radius:12px; font-size:1rem; background:#fff; color:#111827; outline:none; transition:border-color .15s,box-shadow .15s; }
-  .inp:focus { border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.12); }
+  .inp { width:100%; padding:0.875rem 1rem; border:1.5px solid rgba(232,224,208,.10); border-radius:12px; font-size:1rem; background:rgba(255,255,255,.03); color:#f6efe1; outline:none; transition:border-color .15s,box-shadow .15s; }
+  .inp:focus { border-color:#c8a870; box-shadow:0 0 0 3px rgba(200,168,112,.12); }
   .inp-xl { font-size:2.5rem; text-align:center; font-weight:800; }
   .inp-code { font-size:1.75rem; text-align:center; letter-spacing:0.5rem; font-weight:800; }
-  .lbl { display:block; font-size:0.78rem; font-weight:700; color:#14532d; margin-bottom:0.375rem; text-transform:uppercase; letter-spacing:0.05em; }
+  .lbl { display:block; font-size:0.72rem; font-weight:500; color:rgba(232,224,208,.62); margin-bottom:0.375rem; text-transform:uppercase; letter-spacing:0.12em; font-family:'DM Mono',monospace; }
   .fg { margin-bottom:1rem; }
-  .bdg-g { background:#dcfce7; color:#15803d; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
+  .bdg-g { background:rgba(200,168,112,.12); color:#c8a870; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
   .bdg-r { background:#fee2e2; color:#dc2626; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
-  .bdg-y { background:#fef3c7; color:#b45309; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
-  .info-box { background:#f0fdf4; border-radius:12px; padding:1rem; border:1px solid #d1fae5; margin-bottom:1rem; }
-  .info-row { display:flex; justify-content:space-between; align-items:center; padding:0.3rem 0; border-bottom:1px solid #f0fdf4; }
-  .info-k { font-size:0.8rem; color:#6b7280; font-weight:600; }
-  .info-v { font-size:0.875rem; font-weight:700; color:#111827; }
+  .bdg-y { background:rgba(212,170,85,.14); color:#d4aa55; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
+  .info-box { background:rgba(255,255,255,.03); border-radius:14px; padding:1rem; border:1px solid rgba(232,224,208,.10); margin-bottom:1rem; }
+  .info-row { display:flex; justify-content:space-between; align-items:center; padding:0.3rem 0; border-bottom:1px solid rgba(232,224,208,.06); }
+  .info-k { font-size:0.8rem; color:rgba(232,224,208,.62); font-weight:600; }
+  .info-v { font-size:0.875rem; font-weight:700; color:#f6efe1; }
   @media print { body { display:none; } }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .pulse { animation:pulse 1.5s ease-in-out infinite; }
@@ -325,8 +337,8 @@ export default function App() {
       <div className="scr">
         <div className="card lift" style={{ textAlign: 'center' }}>
           <Logo />
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#14532d', marginBottom: '0.25rem' }}>PrimeStack MOTO POS</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '2rem' }}>Enter your activation code</p>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: '600', color: '#e8e0d0', marginBottom: '0.25rem' }}>PrimeStack MOTO POS</h1>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '2rem', fontFamily: 'DM Mono, monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Enter your activation code</p>
           {msg && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.75rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem' }}>{msg}</div>}
           <form onSubmit={doActivate}>
             <div className="fg">
@@ -349,10 +361,10 @@ export default function App() {
       <style>{G}</style>
       <div className="scr">
         <div className="card lift" style={{ textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg,#16a34a,#15803d)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>
+          <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg,#c8a870,#9f7c42)', color:'#111318', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>
             ✓
           </div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#15803d', marginBottom: '1.5rem' }}>Activation Successful!</h1>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: '#c8a870', marginBottom: '1.5rem' }}>Activation Successful!</h1>
           <div className="info-box" style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
             <InfoRow k="Merchant" v={pendingCreds ? pendingCreds.merchant_name : ''} />
             <InfoRow k="POS ID" v={pendingCreds ? pendingCreds.pos_id : ''} />
@@ -372,7 +384,7 @@ export default function App() {
             ⚠️
           </div>
           <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#dc2626', marginBottom: '1rem' }}>Device Disabled</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
             This POS device has been disabled or the merchant account is suspended. Please contact the administrator for more information.
           </p>
           <button onClick={doLogout} className="g-btn lift" style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
@@ -391,7 +403,7 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
             <Logo />
             <div>
-              <h1 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', margin: 0 }}>MOTO POS</h1>
+              <h1 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', margin: 0 }}>MOTO POS</h1>
               <span className="bdg-g">Active</span>
             </div>
           </div>
@@ -418,7 +430,7 @@ export default function App() {
       <div className="scr">
         <div className="card">
           <BackBtn onClick={() => setView('home')} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '1.5rem', textAlign: 'center' }}>Create MOTO Payment</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '1.5rem', textAlign: 'center' }}>Create MOTO Payment</h2>
           <form onSubmit={e => { e.preventDefault(); setView('customer-selection') }}>
             <div className="fg">
               <label className="lbl">Amount (USD)</label>
@@ -431,8 +443,8 @@ export default function App() {
                 </p>
               )}
             </div>
-            <div style={{ background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '10px', padding: '0.625rem 0.875rem', marginBottom: '1rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600', margin: 0 }}>Maximum per transaction: $10,000.00</p>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(232,224,208,0.10)', borderRadius: '10px', padding: '0.625rem 0.875rem', marginBottom: '1rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: '#c8a870', fontWeight: '600', margin: 0 }}>Maximum per transaction: $10,000.00</p>
             </div>
             <div className="fg">
               <label className="lbl">Description (optional)</label>
@@ -456,16 +468,16 @@ export default function App() {
       <div className="scr scr-top">
         <div className="card">
           <BackBtn onClick={() => setView('amount-entry')} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '0.25rem' }}>Select Customer</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-            Amount: <strong style={{ color: '#14532d' }}>${parseFloat(pd.amount || 0).toFixed(2)}</strong>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '0.25rem' }}>Select Customer</h2>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+            Amount: <strong style={{ color: '#e8e0d0' }}>${parseFloat(pd.amount || 0).toFixed(2)}</strong>
           </p>
           <button onClick={() => selectCust(null)} className="o-btn sm" style={{ background: '#dbeafe', borderColor: '#bfdbfe', color: '#1e40af', textAlign: 'left', marginBottom: '0.75rem' }}>
             👤 Walk-in Customer
           </button>
           {customers.length > 0 && (
             <div>
-              <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0.5rem 0' }}>Registered Customers</p>
+              <p style={{ fontSize: '0.72rem', color: 'rgba(232,224,208,0.62)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0.5rem 0', fontFamily: 'DM Mono, monospace' }}>Registered Customers</p>
               <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '0.75rem' }}>
                 {customers.map(c => {
                   const isVerified = c.verification?.status === 'approved';
@@ -489,7 +501,7 @@ export default function App() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <strong>{c.name}</strong>
-                          {c.email ? <span style={{ color: '#6b7280', fontSize: '0.8rem', display: 'block' }}>{c.email}</span> : null}
+                          {c.email ? <span style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.8rem', display: 'block' }}>{c.email}</span> : null}
                         </div>
                         {isVerified ? (
                           <span className="bdg-g">Verified</span>
@@ -516,7 +528,7 @@ export default function App() {
       <div className="scr">
         <div className="card">
           <BackBtn onClick={() => setView('customer-selection')} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '1.5rem' }}>Add Customer</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '1.5rem' }}>Add Customer</h2>
           <form onSubmit={doAddCust}>
             <div className="fg"><label className="lbl">Full Name *</label><input className="inp" type="text" value={newCust.name} onChange={e => setNewCust({ ...newCust, name: e.target.value })} required placeholder="John Smith" /></div>
             <div className="fg"><label className="lbl">Email</label><input className="inp" type="email" value={newCust.email} onChange={e => setNewCust({ ...newCust, email: e.target.value })} placeholder="john@email.com" /></div>
@@ -535,9 +547,9 @@ export default function App() {
       <div className="scr">
         <div className="card">
           <BackBtn onClick={() => setView('customer-selection')} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '1.5rem', textAlign: 'center' }}>Confirm Payment</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '1.5rem', textAlign: 'center' }}>Confirm Payment</h2>
 
-          <div style={{ background: 'linear-gradient(135deg,#16a34a,#0d9488)', borderRadius: '16px', padding: '1.75rem', textAlign: 'center', marginBottom: '1.5rem', boxShadow: '0 8px 24px rgba(22,163,74,0.3)' }}>
+          <div style={{ background: 'linear-gradient(135deg,#c8a870,#9f7c42)', borderRadius: '16px', padding: '1.75rem', textAlign: 'center', marginBottom: '1.5rem', boxShadow: '0 8px 24px rgba(200,168,112,0.22)' }}>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Total Amount</p>
             <p style={{ color: 'white', fontSize: '3rem', fontWeight: '800', lineHeight: 1 }}>${parseFloat(pd.amount || 0).toFixed(2)}</p>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', marginTop: '0.5rem' }}>USD — MOTO Payment</p>
@@ -559,7 +571,7 @@ export default function App() {
                 The cardholder name on the card <strong>must match exactly</strong>:
               </p>
               <div style={{ background: 'white', borderRadius: '8px', padding: '0.625rem 0.875rem', border: '1px solid #fde68a', marginBottom: '0.75rem' }}>
-                <p style={{ fontSize: '1rem', fontWeight: '800', color: '#14532d', margin: 0, textAlign: 'center', letterSpacing: '0.02em' }}>
+                <p style={{ fontSize: '1rem', fontWeight: '800', color: '#111318', margin: 0, textAlign: 'center', letterSpacing: '0.02em' }}>
                   {pd.customerName}
                 </p>
               </div>
@@ -583,8 +595,8 @@ export default function App() {
       <div className="scr">
         <div className="card" style={{ textAlign: 'center' }}>
           <div className="pulse" style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '0.5rem' }}>Processing Payment</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '0.5rem' }}>Processing Payment</h2>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
             {polling ? 'Waiting for payment confirmation...' : 'Stripe payment window opened in new tab'}
           </p>
           <div className="info-box" style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
@@ -606,13 +618,13 @@ export default function App() {
 
           {linkOpened && (
             <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '0.875rem', marginBottom: '1rem' }}>
-              <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#15803d', margin: 0 }}>
+              <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#c8a870', margin: 0 }}>
                 Payment page opened. Waiting for customer to complete payment...
               </p>
             </div>
           )}
 
-          {polling && <p style={{ color: '#16a34a', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>Checking payment status...</p>}
+          {polling && <p style={{ color: '#c8a870', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>Checking payment status...</p>}
           <button onClick={doReset} className="o-btn">Cancel</button>
         </div>
       </div>
@@ -624,18 +636,18 @@ export default function App() {
       <style>{G}</style>
       <div className="scr">
         <div className="card lift" style={{ textAlign: 'center' }}>
-          <div style={{ width: '72px', height: '72px', background: 'linear-gradient(135deg,#16a34a,#15803d)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1rem', boxShadow: '0 8px 24px rgba(22,163,74,0.4)' }}>✓</div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#15803d', marginBottom: '0.5rem' }}>Payment Successful!</h2>
-          <p style={{ fontSize: '2.75rem', fontWeight: '800', color: '#14532d', margin: '1rem 0' }}>
+          <div style={{ width: '72px', height: '72px', background: 'linear-gradient(135deg,#c8a870,#9f7c42)', color:'#111318', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1rem', boxShadow: '0 8px 24px rgba(200,168,112,0.22)' }}>✓</div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#c8a870', marginBottom: '0.5rem' }}>Payment Successful!</h2>
+          <p style={{ fontSize: '2.75rem', fontWeight: '800', color: '#e8e0d0', margin: '1rem 0' }}>
             ${parseFloat(pd.amount || 0).toFixed(2)}
           </p>
           {curOrder && curOrder.payment && curOrder.payment.cardBrand && (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+            <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
               Card: {curOrder.payment.cardBrand.toUpperCase()} .... {curOrder.payment.cardLast4}
             </p>
           )}
           {curOrder && curOrder.orderId && (
-            <p style={{ color: '#6b7280', fontSize: '0.8rem', marginBottom: '1.5rem' }}>Order: {curOrder.orderId} | MOTO</p>
+            <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.8rem', marginBottom: '1.5rem' }}>Order: {curOrder.orderId} | MOTO</p>
           )}
           <button onClick={() => doPrint(curOrder, curOrder ? curOrder.payment : null, pd.amount, pd.customerName, pd.description)}
             className="o-btn sm" style={{ marginBottom: '0.5rem' }}>
@@ -655,7 +667,7 @@ export default function App() {
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ width: '72px', height: '72px', background: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1rem' }}>✗</div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#dc2626', marginBottom: '0.5rem' }}>Payment Failed</h2>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>The payment was declined or failed to process.</p>
+          <p style={{ color: 'rgba(232,224,208,0.62)', marginBottom: '1.5rem' }}>The payment was declined or failed to process.</p>
           <button onClick={() => setView('confirm-payment')} className="g-btn">Try Again</button>
           <button onClick={doReset} className="o-btn">New Payment</button>
         </div>
@@ -676,8 +688,8 @@ export default function App() {
               The cardholder name did not match the registered customer name. The payment has been <strong>automatically refunded</strong>. No funds were taken.
             </p>
           </div>
-          <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1.5rem' }}>
-            Please ask the customer to use the card registered under: <strong style={{ color: '#14532d' }}>{pd.customerName}</strong>
+          <p style={{ fontSize: '0.8rem', color: 'rgba(232,224,208,0.62)', marginBottom: '1.5rem' }}>
+            Please ask the customer to use the card registered under: <strong style={{ color: '#e8e0d0' }}>{pd.customerName}</strong>
           </p>
           <button onClick={() => setView('confirm-payment')} className="g-btn">Try Again</button>
           <button onClick={doReset} className="o-btn">New Payment</button>
@@ -692,19 +704,19 @@ export default function App() {
       <div className="scr scr-top">
         <div className="card">
           <BackBtn onClick={() => setView('home')} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '1.25rem' }}>Orders</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '1.25rem' }}>Orders</h2>
           {orders.length === 0
-            ? <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem 0' }}>No orders yet</p>
+            ? <p style={{ textAlign: 'center', color: 'rgba(232,224,208,0.62)', padding: '2rem 0' }}>No orders yet</p>
             : <div style={{ maxHeight: '520px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {orders.map(o => (
                   <button key={o.id} onClick={() => { setSelOrder(o); setView('order-details') }} className="rh"
-                    style={{ background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '12px', padding: '1rem', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(232,224,208,0.10)', borderRadius: '12px', padding: '1rem', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
                     <div>
-                      <p style={{ fontWeight: '700', color: '#14532d', fontSize: '0.875rem', margin: 0 }}>{o.orderId}</p>
-                      <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>{new Date(o.createdAt).toLocaleDateString()}</p>
+                      <p style={{ fontWeight: '700', color: '#e8e0d0', fontSize: '0.875rem', margin: 0 }}>{o.orderId}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'rgba(232,224,208,0.62)', margin: 0 }}>{new Date(o.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontWeight: '800', color: '#111827', margin: '0 0 0.25rem' }}>{o.currency} {(o.amount || 0).toFixed(2)}</p>
+                      <p style={{ fontWeight: '800', color: '#f6efe1', margin: '0 0 0.25rem' }}>{o.currency} {(o.amount || 0).toFixed(2)}</p>
                       <Bdg s={o.status} />
                     </div>
                   </button>
@@ -722,7 +734,7 @@ export default function App() {
       <div className="scr">
         <div className="card">
           <BackBtn onClick={() => setView('orders')} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d', marginBottom: '1.25rem' }}>Order Details</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '1.25rem' }}>Order Details</h2>
           <div className="info-box">
             <InfoRow k="Order ID" v={selOrder.orderId} />
             <InfoRow k="Amount" v={selOrder.currency + ' ' + (selOrder.amount || 0).toFixed(2)} />
@@ -754,7 +766,7 @@ export default function App() {
           <BackBtn onClick={() => setView('home')} />
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <Logo />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#14532d' }}>Settings</h2>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0' }}>Settings</h2>
           </div>
           <div className="info-box">
             <InfoRow k="Merchant" v={creds ? creds.merchant_name : ''} />

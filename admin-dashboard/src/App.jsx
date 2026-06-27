@@ -22,34 +22,34 @@ class ErrorBoundary extends React.Component {
 
 /* ── Theme ────────────────────────────────────────────────────────────────── */
 const C = {
-  sidebar:      '#1a3a28',
-  sidebarHov:   '#234d35',
-  accent:       '#16a34a',
-  accentLight:  '#dcfce7',
-  accentMid:    '#86efac',
-  accentDark:   '#15803d',
-  bg:           '#f0fdf4',
-  white:        '#ffffff',
-  border:       '#d1fae5',
-  borderGray:   '#e5e7eb',
-  text:         '#14532d',
-  textDark:     '#111827',
-  textMuted:    '#6b7280',
+  sidebar:      '#111318',
+  sidebarHov:   'rgba(200,168,112,0.08)',
+  accent:       '#c8a870',
+  accentLight:  'rgba(200,168,112,0.12)',
+  accentMid:    'rgba(200,168,112,0.28)',
+  accentDark:   '#f1e8d8',
+  bg:           '#0f0608',
+  white:        '#111318',
+  border:       'rgba(232,224,208,0.10)',
+  borderGray:   'rgba(232,224,208,0.10)',
+  text:         '#e8e0d0',
+  textDark:     '#f6efe1',
+  textMuted:    'rgba(232,224,208,0.62)',
   red:          '#ef4444',
-  redLight:     '#fee2e2',
-  yellow:       '#f59e0b',
-  yellowLight:  '#fef3c7',
-  blue:         '#3b82f6',
-  blueLight:    '#dbeafe',
-  purple:       '#8b5cf6',
-  purpleLight:  '#ede9fe',
+  redLight:     'rgba(239,68,68,0.12)',
+  yellow:       '#d4aa55',
+  yellowLight:  'rgba(212,170,85,0.14)',
+  blue:         '#7fa8c9',
+  blueLight:    'rgba(127,168,201,0.14)',
+  purple:       '#9b7bbb',
+  purpleLight:  'rgba(155,123,187,0.14)',
 }
 
 const NAV_ITEMS = [
   { id:'dashboard',    label:'Dashboard',    icon:'▦' },
   { id:'merchants',    label:'Merchants',    icon:'🏪' },
   { id:'pos-devices',  label:'POS Devices',  icon:'🖥' },
-  { id:'transactions', label:'Transactions', icon:'�' },
+  { id:'transactions', label:'Transactions', icon:'💳' },
   { id:'disputes',     label:'Disputes',     icon:'⚠' },
   { id:'verifications',label:'Verifications',icon:'🔍' },
   { id:'webhooks',     label:'Webhooks',     icon:'🔔' },
@@ -62,66 +62,77 @@ const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
 /* ── Tiny hover-lift style injected once ─────────────────────────────────── */
 const GLOBAL_CSS = `
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body {
+    margin: 0;
+    font-family: 'Cormorant', Georgia, serif;
+    color: #e8e0d0;
+    background-color: #0f0608;
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0, transparent 14px, rgba(255,255,255,0.014) 14px, rgba(255,255,255,0.014) 15px),
+      repeating-linear-gradient(89deg, transparent 0, transparent 32px, rgba(0,0,0,0.11) 32px, rgba(0,0,0,0.11) 34px),
+      linear-gradient(175deg, #1e0a0e 0%, #0f0608 40%, #160810 70%, #120608 100%);
+  }
+  button, input, textarea, select { font: inherit; }
+  h1, h2, h3, h4, h5, h6 { font-family: 'Cormorant SC', 'Cormorant', Georgia, serif; letter-spacing: 0.08em; font-weight: 500; }
   .lift { transition: transform 0.18s ease, box-shadow 0.18s ease; }
-  .lift:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(22,163,74,0.18) !important; }
+  .lift:hover { transform: translateY(-3px); box-shadow: 0 20px 44px rgba(0,0,0,0.34) !important; }
   .lift-sm { transition: transform 0.15s ease; }
   .lift-sm:hover { transform: translateY(-2px); }
   .nav-btn { transition: background 0.15s, color 0.15s, transform 0.15s; }
-  .nav-btn:hover { background: rgba(22,163,74,0.15) !important; transform: translateX(3px); }
+  .nav-btn:hover { background: rgba(200,168,112,0.10) !important; transform: translateX(3px); }
   .row-hover { transition: background 0.12s; }
-  .row-hover:hover { background: #f0fdf4 !important; cursor: pointer; }
-  input:focus { border-color: #16a34a !important; box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
+  .row-hover:hover { background: rgba(200,168,112,0.08) !important; cursor: pointer; }
+  input:focus, textarea:focus { border-color: #c8a870 !important; box-shadow: 0 0 0 3px rgba(200,168,112,0.12); }
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #86efac; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: #c8a870; border-radius: 3px; }
   @keyframes bellPulse { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{transform:scale(1.12);box-shadow:0 0 0 10px rgba(239,68,68,0)} }
-  @keyframes loginFloat { 0%,100%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(0,-18px,0) scale(1.05)} }
+  @keyframes loginFloat { 0%,100%{transform:translate3d(0,0,0)} 50%{transform:translate3d(0,-16px,0)} }
   @keyframes loginPulse { 0%,100%{opacity:0.45} 50%{opacity:0.85} }
   .login-shell { min-height:100vh; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:2rem; }
   .login-grid { position:relative; z-index:2; width:min(1120px, 100%); display:grid; grid-template-columns:1.05fr 0.95fr; gap:1.5rem; align-items:stretch; }
-  .login-card { position:relative; border:1px solid rgba(255,255,255,0.12); background:rgba(7,10,18,0.58); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 24px 80px rgba(0,0,0,0.45); border-radius:28px; overflow:hidden; }
-  .login-card::before { content:''; position:absolute; inset:0; padding:1px; border-radius:inherit; background:linear-gradient(135deg, color-mix(in srgb, var(--login-accent) 70%, white 30%), rgba(255,255,255,0.08), color-mix(in srgb, var(--login-accent-2) 72%, white 28%)); -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
-  .login-info { padding:2.2rem; display:flex; flex-direction:column; justify-content:space-between; min-height:640px; }
-  .login-form-card { padding:2rem; display:flex; flex-direction:column; justify-content:center; min-height:640px; }
-  .login-overline { display:inline-flex; align-items:center; gap:0.5rem; width:max-content; padding:0.45rem 0.8rem; border-radius:999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:#dbeafe; font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
-  .login-title { margin:1rem 0 0.75rem; color:#fff; font-size:clamp(2rem, 5vw, 3.8rem); line-height:0.96; letter-spacing:-0.04em; max-width:8ch; }
-  .login-copy { margin:0; color:rgba(226,232,240,0.82); font-size:1rem; line-height:1.7; max-width:56ch; }
+  .login-card { position:relative; border:1px solid rgba(232,224,208,0.10); background:rgba(17,19,24,0.9); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 28px 90px rgba(0,0,0,0.42); border-radius:30px; overflow:hidden; }
+  .login-card::before { content:''; position:absolute; inset:0; border-radius:inherit; border:1px solid rgba(200,168,112,0.12); pointer-events:none; }
+  .login-info { padding:2.3rem; display:flex; flex-direction:column; justify-content:space-between; min-height:640px; }
+  .login-form-card { padding:2.1rem; display:flex; flex-direction:column; justify-content:center; min-height:640px; }
+  .login-overline { display:inline-flex; align-items:center; gap:0.5rem; width:max-content; padding:0.45rem 0.8rem; border-radius:999px; border:1px solid rgba(232,224,208,0.10); background:rgba(255,255,255,0.03); color:#c8a870; font-size:0.72rem; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; font-family:'DM Mono',monospace; }
+  .login-title { margin:1rem 0 0.75rem; color:#f6efe1; font-size:clamp(2.2rem, 5vw, 4rem); line-height:0.96; letter-spacing:0.12em; max-width:9ch; }
+  .login-copy { margin:0; color:rgba(232,224,208,0.62); font-size:1rem; line-height:1.7; max-width:56ch; }
   .login-feature-list { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:0.85rem; margin-top:1.6rem; }
-  .login-feature { padding:1rem; border-radius:18px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); }
-  .login-feature-label { margin:0 0 0.35rem; color:rgba(226,232,240,0.72); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; }
-  .login-feature-value { margin:0; color:#fff; font-size:0.95rem; font-weight:700; line-height:1.4; }
-  .login-preview { margin-top:auto; border-radius:22px; padding:1.15rem; background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.1); }
+  .login-feature { padding:1rem; border-radius:18px; background:rgba(255,255,255,0.03); border:1px solid rgba(232,224,208,0.08); }
+  .login-feature-label { margin:0 0 0.35rem; color:#c8a870; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.12em; font-weight:500; font-family:'DM Mono',monospace; }
+  .login-feature-value { margin:0; color:#f6efe1; font-size:0.95rem; font-weight:600; line-height:1.4; }
+  .login-preview { margin-top:auto; border-radius:22px; padding:1.15rem; background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); border:1px solid rgba(232,224,208,0.08); }
   .login-preview-top { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
-  .login-preview-chip { display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.7rem; border-radius:999px; background:rgba(255,255,255,0.06); color:#fff; font-size:0.75rem; font-weight:700; }
-  .login-preview-line { height:10px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)); margin-bottom:0.75rem; }
+  .login-preview-chip { display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.7rem; border-radius:999px; background:rgba(255,255,255,0.04); color:#f6efe1; font-size:0.75rem; font-weight:600; }
+  .login-preview-line { height:10px; border-radius:999px; background:linear-gradient(90deg, rgba(200,168,112,0.18), rgba(255,255,255,0.04)); margin-bottom:0.75rem; }
   .login-preview-line:last-child { margin-bottom:0; width:72%; }
   .login-logo-wrap { display:flex; align-items:center; gap:0.9rem; margin-bottom:1.1rem; }
-  .login-logo-mark { width:56px; height:56px; border-radius:18px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--login-accent), var(--login-accent-2)); color:#fff; font-size:1.35rem; box-shadow:0 14px 36px color-mix(in srgb, var(--login-accent) 42%, transparent 58%); }
-  .login-panel-title { margin:0; color:#fff; font-size:1.75rem; font-weight:800; letter-spacing:-0.03em; }
-  .login-panel-copy { margin:0.3rem 0 0; color:rgba(226,232,240,0.7); font-size:0.92rem; }
-  .login-mode-switch { display:flex; gap:0.4rem; margin:1.35rem 0 1.25rem; padding:0.3rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
-  .login-mode-btn { flex:1; border:none; border-radius:12px; padding:0.8rem 0.9rem; background:transparent; color:rgba(226,232,240,0.68); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.18s ease; }
-  .login-mode-btn.active { background:linear-gradient(135deg, color-mix(in srgb, var(--login-accent) 20%, rgba(255,255,255,0.08)), color-mix(in srgb, var(--login-accent-2) 16%, rgba(255,255,255,0.03))); color:#fff; box-shadow:0 10px 28px rgba(0,0,0,0.18); }
-  .login-field-label { display:block; margin-bottom:0.45rem; color:#e2e8f0; font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; }
+  .login-logo-mark { width:56px; height:56px; border-radius:18px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--login-accent), var(--login-accent-2)); color:#111318; font-size:1.35rem; box-shadow:0 14px 36px rgba(200,168,112,0.16); }
+  .login-panel-title { margin:0; color:#f6efe1; font-size:1.9rem; font-weight:600; letter-spacing:0.08em; }
+  .login-panel-copy { margin:0.3rem 0 0; color:rgba(232,224,208,0.62); font-size:0.92rem; font-family:'DM Mono',monospace; letter-spacing:0.06em; text-transform:uppercase; }
+  .login-mode-switch { display:flex; gap:0.4rem; margin:1.35rem 0 1.25rem; padding:0.3rem; background:rgba(255,255,255,0.03); border:1px solid rgba(232,224,208,0.08); border-radius:16px; }
+  .login-mode-btn { flex:1; border:none; border-radius:12px; padding:0.8rem 0.9rem; background:transparent; color:rgba(232,224,208,0.62); font-size:0.8rem; font-weight:500; cursor:pointer; transition:all 0.18s ease; letter-spacing:0.08em; text-transform:uppercase; font-family:'DM Mono',monospace; }
+  .login-mode-btn.active { background:rgba(200,168,112,0.12); color:#f6efe1; box-shadow:0 10px 28px rgba(0,0,0,0.18); }
+  .login-field-label { display:block; margin-bottom:0.45rem; color:rgba(232,224,208,0.62); font-size:0.74rem; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; font-family:'DM Mono',monospace; }
   .login-alert { padding:0.85rem 0.95rem; border-radius:16px; margin-bottom:1rem; font-size:0.88rem; border:1px solid transparent; }
-  .login-alert.error { background:rgba(239,68,68,0.12); color:#fecaca; border-color:rgba(248,113,113,0.25); }
-  .login-alert.success { background:rgba(34,197,94,0.12); color:#bbf7d0; border-color:rgba(74,222,128,0.2); }
-  .login-submit { width:100%; padding:0.95rem 1rem; border:none; border-radius:16px; background:linear-gradient(135deg, var(--login-accent), var(--login-accent-2)); color:#fff; font-size:0.96rem; font-weight:800; cursor:pointer; box-shadow:0 16px 36px color-mix(in srgb, var(--login-accent) 38%, transparent 62%); }
-  .login-note { margin-top:0.9rem; padding:0.9rem 0.95rem; border-radius:16px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.2); color:#fde68a; font-size:0.82rem; line-height:1.6; }
-  .login-theme-panel { position:absolute; left:2rem; bottom:2rem; z-index:3; padding:0.5rem; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(7,10,18,0.52); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 12px 32px rgba(0,0,0,0.35); }
+  .login-alert.error { background:rgba(239,68,68,0.12); color:#fecaca; border-color:rgba(248,113,113,0.20); }
+  .login-alert.success { background:rgba(200,168,112,0.12); color:#f6efe1; border-color:rgba(200,168,112,0.20); }
+  .login-submit { width:100%; padding:0.95rem 1rem; border:none; border-radius:16px; background:linear-gradient(135deg, var(--login-accent), var(--login-accent-2)); color:#111318; font-size:0.96rem; font-weight:700; cursor:pointer; box-shadow:0 16px 36px rgba(200,168,112,0.18); }
+  .login-note { margin-top:0.9rem; padding:0.9rem 0.95rem; border-radius:16px; background:rgba(212,170,85,0.12); border:1px solid rgba(212,170,85,0.20); color:#f4dfb5; font-size:0.82rem; line-height:1.6; }
+  .login-theme-panel { position:absolute; left:2rem; bottom:2rem; z-index:3; padding:0.5rem; border-radius:999px; border:1px solid rgba(232,224,208,0.12); background:rgba(17,19,24,0.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 12px 32px rgba(0,0,0,0.35); }
   .login-theme-thumbs { display:flex; align-items:center; gap:0.55rem; }
   .login-theme-thumb { width:22px; height:22px; border-radius:999px; border:2px solid transparent; cursor:pointer; transition:transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
   .login-theme-thumb:hover { transform:scale(1.14); }
-  .login-theme-thumb.active { border-color:#fff; transform:scale(1.14); box-shadow:0 0 14px color-mix(in srgb, var(--login-accent) 72%, white 28%); }
-  .login-bg-orb { position:absolute; border-radius:50%; filter:blur(10px); animation:loginFloat 10s ease-in-out infinite; opacity:0.8; pointer-events:none; }
-  .login-bg-orb.one { width:380px; height:380px; top:-80px; left:-60px; background:radial-gradient(circle, color-mix(in srgb, var(--login-accent) 70%, white 30%), transparent 70%); }
-  .login-bg-orb.two { width:440px; height:440px; right:-120px; top:8%; background:radial-gradient(circle, color-mix(in srgb, var(--login-accent-2) 62%, white 38%), transparent 72%); animation-duration:14s; }
-  .login-bg-orb.three { width:320px; height:320px; bottom:-90px; right:18%; background:radial-gradient(circle, rgba(255,255,255,0.16), transparent 72%); animation-duration:12s; }
-  .login-grid-lines { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); background-size:34px 34px; mask-image:radial-gradient(circle at center, black 40%, transparent 88%); opacity:0.18; pointer-events:none; }
-  .login-ring { position:absolute; inset:auto 12% 8% auto; width:340px; height:340px; border-radius:50%; border:1px solid rgba(255,255,255,0.09); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04); animation:loginPulse 4.5s ease-in-out infinite; pointer-events:none; }
-  .login-ring::before, .login-ring::after { content:''; position:absolute; inset:28px; border-radius:50%; border:1px solid rgba(255,255,255,0.08); }
-  .login-ring::after { inset:62px; border-color:rgba(255,255,255,0.05); }
+  .login-theme-thumb.active { border-color:#f6efe1; transform:scale(1.14); box-shadow:0 0 14px rgba(200,168,112,0.28); }
+  .login-bg-orb { position:absolute; border-radius:50%; filter:blur(12px); animation:loginFloat 10s ease-in-out infinite; opacity:0.65; pointer-events:none; }
+  .login-bg-orb.one { width:380px; height:380px; top:-80px; left:-60px; background:radial-gradient(circle, rgba(200,168,112,0.18), transparent 70%); }
+  .login-bg-orb.two { width:440px; height:440px; right:-120px; top:8%; background:radial-gradient(circle, rgba(110,42,42,0.24), transparent 72%); animation-duration:14s; }
+  .login-bg-orb.three { width:320px; height:320px; bottom:-90px; right:18%; background:radial-gradient(circle, rgba(255,255,255,0.10), transparent 72%); animation-duration:12s; }
+  .login-grid-lines { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:34px 34px; mask-image:radial-gradient(circle at center, black 40%, transparent 88%); opacity:0.16; pointer-events:none; }
+  .login-ring { position:absolute; inset:auto 12% 8% auto; width:340px; height:340px; border-radius:50%; border:1px solid rgba(232,224,208,0.08); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02); animation:loginPulse 4.5s ease-in-out infinite; pointer-events:none; }
+  .login-ring::before, .login-ring::after { content:''; position:absolute; inset:28px; border-radius:50%; border:1px solid rgba(232,224,208,0.06); }
+  .login-ring::after { inset:62px; border-color:rgba(232,224,208,0.04); }
   @media (max-width: 980px) {
     .login-grid { grid-template-columns:1fr; }
     .login-info, .login-form-card { min-height:auto; }
@@ -137,31 +148,31 @@ const GLOBAL_CSS = `
 
 const LOGIN_THEMES = [
   {
-    name: 'Magma & Cyan',
-    accent: '#00d2ff',
-    accent2: '#ff5500',
-    background: 'radial-gradient(circle at top left, rgba(0,210,255,0.16), transparent 34%), radial-gradient(circle at top right, rgba(255,85,0,0.18), transparent 38%), linear-gradient(135deg, #010102 0%, #050814 52%, #0a1320 100%)',
-    badge: 'Core Shield',
-    heading: 'Secure control for every Moto POS operation.',
-    copy: 'A cinematic admin login with the dark energy, glass surfaces, and live accent switching from your theme file.',
+    name: 'Reserve',
+    accent: '#c8a870',
+    accent2: '#9f7c42',
+    background: 'radial-gradient(circle at top, rgba(200,168,112,0.12), transparent 30%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)',
+    badge: 'PrimeStack Reserve',
+    heading: 'Luxury control for every Moto POS operation.',
+    copy: 'The dashboard keeps every workflow intact while carrying the same dark-charcoal, deep-burgundy, and warm-gold language from your shared theme.',
   },
   {
-    name: 'Neon Void',
-    accent: '#ff00ff',
-    accent2: '#00ff88',
-    background: 'radial-gradient(circle at 18% 16%, rgba(255,0,255,0.18), transparent 34%), radial-gradient(circle at 88% 10%, rgba(0,255,136,0.16), transparent 34%), linear-gradient(135deg, #020005 0%, #11001a 48%, #07161a 100%)',
-    badge: 'Night Protocol',
-    heading: 'High-contrast access built for late-hour operations.',
-    copy: 'This variation pushes the neon side of the original concept while preserving your existing password and recovery flows.',
+    name: 'Burgundy',
+    accent: '#b88d63',
+    accent2: '#6e2a2a',
+    background: 'radial-gradient(circle at 18% 16%, rgba(184,141,99,0.14), transparent 34%), radial-gradient(circle at 88% 10%, rgba(110,42,42,0.18), transparent 34%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)',
+    badge: 'Evening Service',
+    heading: 'Refined access built for live operations.',
+    copy: 'This keeps the same premium visual family while giving you a slightly richer burgundy mood on the login surface.',
   },
   {
-    name: 'Solar Flare',
-    accent: '#ffdd00',
-    accent2: '#3366ff',
-    background: 'radial-gradient(circle at 20% 18%, rgba(255,221,0,0.18), transparent 32%), radial-gradient(circle at 82% 14%, rgba(51,102,255,0.18), transparent 32%), linear-gradient(135deg, #000103 0%, #1a1300 52%, #091327 100%)',
-    badge: 'Flare Watch',
-    heading: 'Bright signal paths for merchants, verifications, and risk control.',
-    copy: 'The form stays fully functional while the login page takes on the premium visual treatment from the theme prototype.',
+    name: 'Ledger',
+    accent: '#d4b27a',
+    accent2: '#704d2f',
+    background: 'radial-gradient(circle at 20% 18%, rgba(212,178,122,0.16), transparent 32%), radial-gradient(circle at 82% 14%, rgba(112,77,47,0.18), transparent 32%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)',
+    badge: 'House Ledger',
+    heading: 'Warm gold surfaces for merchants, verifications, and risk review.',
+    copy: 'A third variation in the same family, built to stay close to the CodePen mood instead of drifting into a different design language.',
   },
 ]
 
@@ -844,11 +855,11 @@ export default function App() {
             <div style={{display:'flex',alignItems:'center',gap:'0.875rem'}}>
 
               {/* System Status Toggle */}
-              <div style={{display:'flex',alignItems:'center',gap:'0.625rem',background:systemOnline?'#dcfce7':'#fee2e2',padding:'0.375rem 0.875rem',borderRadius:'20px',border:`1px solid ${systemOnline?'#86efac':'#fca5a5'}`}}>
-                <span style={{width:'8px',height:'8px',borderRadius:'50%',background:systemOnline?'#16a34a':'#ef4444',boxShadow:systemOnline?'0 0 6px #16a34a':'0 0 6px #ef4444',flexShrink:0,animation:!systemOnline?'pulse 1s infinite':'none'}}/>
-                <span style={{fontSize:'0.75rem',fontWeight:'700',color:systemOnline?'#15803d':'#dc2626'}}>{systemOnline?'ONLINE':'OFFLINE'}</span>
+              <div style={{display:'flex',alignItems:'center',gap:'0.625rem',background:systemOnline?'rgba(200,168,112,0.12)':'#fee2e2',padding:'0.375rem 0.875rem',borderRadius:'20px',border:`1px solid ${systemOnline?'#d8bf8c':'#fca5a5'}`}}>
+                <span style={{width:'8px',height:'8px',borderRadius:'50%',background:systemOnline?'#c8a870':'#ef4444',boxShadow:systemOnline?'0 0 6px #c8a870':'0 0 6px #ef4444',flexShrink:0,animation:!systemOnline?'pulse 1s infinite':'none'}}/>
+                <span style={{fontSize:'0.75rem',fontWeight:'700',color:systemOnline?'#f4dfb5':'#dc2626'}}>{systemOnline?'ONLINE':'OFFLINE'}</span>
                 <button onClick={toggleSystem} disabled={togglingSystem}
-                  style={{background:systemOnline?'#ef4444':'#16a34a',color:'white',border:'none',borderRadius:'12px',padding:'0.2rem 0.625rem',fontSize:'0.72rem',fontWeight:'700',cursor:'pointer',opacity:togglingSystem?0.6:1}}>
+                  style={{background:systemOnline?'#ef4444':'#c8a870',color:'white',border:'none',borderRadius:'12px',padding:'0.2rem 0.625rem',fontSize:'0.72rem',fontWeight:'700',cursor:'pointer',opacity:togglingSystem?0.6:1}}>
                   {togglingSystem?'...':(systemOnline?'Go Offline':'Go Online')}
                 </button>
               </div>
@@ -932,10 +943,10 @@ export default function App() {
                 {/* Stat cards */}
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:'1rem',marginBottom:'1.5rem'}}>
                   {[
-                    {label:'Total Merchants',    val:merchants.length,                                  icon:'🏪', grad:'linear-gradient(135deg,#16a34a,#15803d)', sub:`${merchants.filter(m=>m.status==='active').length} active`},
+                    {label:'Total Merchants',    val:merchants.length,                                  icon:'🏪', grad:'linear-gradient(135deg,#c8a870,#9f7c42)', sub:`${merchants.filter(m=>m.status==='active').length} active`},
                     {label:'Active POS Devices', val:posDevices.filter(p=>p.status==='active').length,  icon:'🖥',  grad:'linear-gradient(135deg,#3b82f6,#2563eb)', sub:`${posDevices.length} total`},
                     {label:"Today's Volume",      val:`$${todayVol.toFixed(2)}`,                         icon:'💰', grad:'linear-gradient(135deg,#8b5cf6,#7c3aed)', sub:'payments today'},
-                    {label:'All-Time Volume',    val:`$${totalVol.toFixed(2)}`,                         icon:'📈', grad:'linear-gradient(135deg,#16a34a,#0d9488)', sub:`${orders.filter(o=>o.status==='paid').length} paid`},
+                    {label:'All-Time Volume',    val:`$${totalVol.toFixed(2)}`,                         icon:'📈', grad:'linear-gradient(135deg,#c8a870,#0d9488)', sub:`${orders.filter(o=>o.status==='paid').length} paid`},
                     {label:'Total Orders',       val:orders.length,                                     icon:'📋', grad:'linear-gradient(135deg,#f59e0b,#d97706)', sub:`${orders.filter(o=>o.status==='pending').length} pending`},
                     {label:'Failed Payments',    val:orders.filter(o=>o.status==='failed').length,      icon:'⚠',  grad:'linear-gradient(135deg,#ef4444,#dc2626)', sub:'need attention'},
                     {label:'Pending Verifications', val:verifications.filter(v=>v.status==='pending').length, icon:'🔍', grad:'linear-gradient(135deg,#f59e0b,#d97706)', sub:'awaiting review'},
@@ -1166,7 +1177,7 @@ export default function App() {
                     <p style={{fontSize:'0.7rem',color:'rgba(255,255,255,0.6)',fontWeight:'700',textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 0.625rem'}}>
                       Activation Code
                     </p>
-                    <div style={{fontFamily:'monospace',fontSize:'2rem',fontWeight:'800',letterSpacing:'0.4rem',color:'#86efac',background:'rgba(0,0,0,0.25)',borderRadius:'10px',padding:'0.75rem 1rem',border:'1px dashed rgba(134,239,172,0.5)',display:'inline-block',minWidth:'220px'}}>
+                    <div style={{fontFamily:'monospace',fontSize:'2rem',fontWeight:'800',letterSpacing:'0.4rem',color:'#d8bf8c',background:'rgba(0,0,0,0.25)',borderRadius:'10px',padding:'0.75rem 1rem',border:'1px dashed rgba(134,239,172,0.5)',display:'inline-block',minWidth:'220px'}}>
                       {selPos.activationCode || '—'}
                     </div>
                     <p style={{fontSize:'0.72rem',color:'rgba(255,255,255,0.45)',margin:'0.625rem 0 0'}}>
@@ -1281,8 +1292,8 @@ export default function App() {
                       d.merchant?.businessName||'Unknown',
                       <span style={{fontWeight:'700',color:'#dc2626'}}>${d.amount.toFixed(2)}</span>,
                       <span style={{fontSize:'0.75rem',background:'#fee2e2',color:'#dc2626',padding:'0.2rem 0.5rem',borderRadius:'6px',fontWeight:'600'}}>{d.reason}</span>,
-                      <span style={{fontWeight:'700',color:d.riskScore>=80?'#dc2626':d.riskScore>=60?'#f59e0b':'#16a34a'}}>{d.riskScore}/100</span>,
-                      <span style={{fontSize:'0.75rem',background:d.status.includes('won')?'#dcfce7':d.status.includes('lost')?'#fee2e2':'#fef3c7',color:d.status.includes('won')?'#15803d':d.status.includes('lost')?'#dc2626':'#b45309',padding:'0.2rem 0.5rem',borderRadius:'6px',fontWeight:'600'}}>{d.status}</span>,
+                      <span style={{fontWeight:'700',color:d.riskScore>=80?'#dc2626':d.riskScore>=60?'#f59e0b':'#c8a870'}}>{d.riskScore}/100</span>,
+                      <span style={{fontSize:'0.75rem',background:d.status.includes('won')?'rgba(200,168,112,0.12)':d.status.includes('lost')?'#fee2e2':'#fef3c7',color:d.status.includes('won')?'#f4dfb5':d.status.includes('lost')?'#dc2626':'#b45309',padding:'0.2rem 0.5rem',borderRadius:'6px',fontWeight:'600'}}>{d.status}</span>,
                       d.evidenceDeadline?<span style={{fontSize:'0.8rem',color:new Date(d.evidenceDeadline)<new Date()?'#dc2626':'#b45309',fontWeight:'600'}}>{new Date(d.evidenceDeadline).toLocaleDateString()}</span>:'—'
                     ])}
                     onRow={i=>setSelDispute(disputes[i])}
@@ -1296,7 +1307,7 @@ export default function App() {
                         f.orderId||'—',
                         f.merchant?.businessName||'Unknown',
                         <span style={{fontWeight:'600',color:'#dc2626'}}>{f.type}</span>,
-                        <span style={{fontSize:'0.75rem',background:f.severity==='high'?'#fee2e2':f.severity==='medium'?'#fef3c7':'#dcfce7',color:f.severity==='high'?'#dc2626':f.severity==='medium'?'#b45309':'#15803d',padding:'0.2rem 0.5rem',borderRadius:'6px',fontWeight:'700'}}>{f.severity.toUpperCase()}</span>,
+                        <span style={{fontSize:'0.75rem',background:f.severity==='high'?'#fee2e2':f.severity==='medium'?'#fef3c7':'rgba(200,168,112,0.12)',color:f.severity==='high'?'#dc2626':f.severity==='medium'?'#b45309':'#f4dfb5',padding:'0.2rem 0.5rem',borderRadius:'6px',fontWeight:'700'}}>{f.severity.toUpperCase()}</span>,
                         new Date(f.createdAt).toLocaleDateString()
                       ])}
                       empty="No fraud flags"/>
@@ -1324,7 +1335,7 @@ export default function App() {
                     ].map(([k,v])=><InfoBox key={k} k={k} v={String(v)}/>)}
                     <div style={{background:C.bg,borderRadius:'10px',padding:'0.875rem',border:`1px solid ${C.border}`}}>
                       <p style={{fontSize:'0.68rem',color:C.accent,fontWeight:'700',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 0.3rem'}}>Status</p>
-                      <span style={{fontSize:'0.875rem',fontWeight:'700',color:selDispute.status.includes('won')?'#15803d':selDispute.status.includes('lost')?'#dc2626':'#b45309'}}>{selDispute.status}</span>
+                      <span style={{fontSize:'0.875rem',fontWeight:'700',color:selDispute.status.includes('won')?'#f4dfb5':selDispute.status.includes('lost')?'#dc2626':'#b45309'}}>{selDispute.status}</span>
                     </div>
                   </div>
 
@@ -1615,7 +1626,7 @@ export default function App() {
                       placeholder="Type a message..." maxLength={1000}
                       style={{flex:1,padding:'0.625rem 0.875rem',border:`1.5px solid ${C.border}`,borderRadius:'12px',fontSize:'0.875rem',outline:'none',color:C.textDark}} />
                     <button onClick={sendChatMsg} disabled={!chatInput.trim()}
-                      style={{width:'40px',height:'40px',background:chatInput.trim()?`linear-gradient(135deg,${C.accent},${C.accentDark})`:'#e5e7eb',border:'none',borderRadius:'12px',cursor:chatInput.trim()?'pointer':'not-allowed',color:'white',fontSize:'1.1rem',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                      style={{width:'40px',height:'40px',background:chatInput.trim()?`linear-gradient(135deg,${C.accent},${C.accentDark})`:'rgba(232,224,208,0.10)',border:'none',borderRadius:'12px',cursor:chatInput.trim()?'pointer':'not-allowed',color:'white',fontSize:'1.1rem',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                       ➤
                     </button>
                   </div>
@@ -1647,12 +1658,12 @@ export default function App() {
 
 function Bdg({s}) {
   const m = {
-    active:    {bg:'#dcfce7',c:'#15803d'},  paid:      {bg:'#dcfce7',c:'#15803d'},
+    active:    {bg:'rgba(200,168,112,0.12)',c:'#f4dfb5'},  paid:      {bg:'rgba(200,168,112,0.12)',c:'#f4dfb5'},
     suspended: {bg:'#fee2e2',c:'#dc2626'},  failed:    {bg:'#fee2e2',c:'#dc2626'},
     disabled:  {bg:'#fee2e2',c:'#dc2626'},  pending:   {bg:'#fef3c7',c:'#b45309'},
     disputed:  {bg:'#fef3c7',c:'#dc2626'},  flagged:   {bg:'#fef3c7',c:'#dc2626'},
   }
-  const x = m[s]||{bg:'#f3f4f6',c:'#6b7280'}
+  const x = m[s]||{bg:'#f3f4f6',c:'rgba(232,224,208,0.62)'}
   return <span style={{background:x.bg,color:x.c,padding:'0.2rem 0.65rem',borderRadius:'20px',fontSize:'0.75rem',fontWeight:'700',display:'inline-block'}}>{cap(s)}</span>
 }
 
@@ -1673,7 +1684,7 @@ function WCard({title, action, children}) {
 function Tbl({heads, rows, onRow, empty}) {
   return (
     <table style={{width:'100%',borderCollapse:'collapse'}}>
-      <thead><tr style={{background:'#f0fdf4'}}>
+      <thead><tr style={{background:'rgba(255,255,255,0.03)'}}>
         {heads.map(h=><th key={h} style={{padding:'0.7rem 1.25rem',textAlign:'left',fontSize:'0.7rem',color:C.accent,fontWeight:'700',textTransform:'uppercase',letterSpacing:'0.06em',borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
       </tr></thead>
       <tbody>
