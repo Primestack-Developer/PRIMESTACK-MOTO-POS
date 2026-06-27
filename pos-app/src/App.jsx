@@ -80,7 +80,18 @@ const BackBtn = ({ onClick }) => (
 )
 
 /* ── Main App ───────────────────────────────────────────────────────────────── */
+const APP_VERSION = '1.0.1'; // Increment this to force clear cache
+
 export default function App() {
+  // Clear cache on version change
+  React.useEffect(() => {
+    const storedVersion = localStorage.getItem('posAppVersion');
+    if (storedVersion !== APP_VERSION) {
+      localStorage.clear();
+      localStorage.setItem('posAppVersion', APP_VERSION);
+    }
+  }, []);
+
   const [creds, setCreds] = useState(() => {
     try { const s = localStorage.getItem('posCredentials'); return s ? JSON.parse(s) : null } catch { return null }
   })
