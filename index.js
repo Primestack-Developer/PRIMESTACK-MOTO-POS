@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const Stripe = require('stripe');
 const { z } = require('zod');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -261,14 +262,35 @@ const authenticatePOS = (req, res, next) => {
 const generateMerchantId = () => `M${Math.floor(100000 + Math.random() * 900000)}`;
 
 const generatePosId = async () => {
-  const count = await prisma.pOSDevice.count();
-  return `PS-TM-${String(count + 1).padStart(6, '0')}`;
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `PS-${timestamp}-${random}`;
 };
 
 const generateActivationCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const seg = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   return `${seg()}-${seg()}`;
+};
+
+const createPosDevice = async (merchantId) => {
+  let lastError;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const posId = await generatePosId();
+      const activationCode = generateActivationCode();
+      return await prisma.pOSDevice.create({
+        data: { posId, merchantId, activationCode, status: 'pending' }
+      });
+    } catch (error) {
+      lastError = error;
+      const isUniqueConstraintError = error?.code === 'P2002' || /Unique constraint failed/i.test(error?.message || '');
+      if (!isUniqueConstraintError) throw error;
+    }
+  }
+
+  throw lastError;
 };
 
 const generateOrderId = async () => {
@@ -933,17 +955,7 @@ router.post('/admin/merchants/:merchantId/pos-devices', authenticateAdmin, async
     const merchant = await prisma.merchant.findUnique({ where: { merchantId } });
     if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
 
-    const posId = await generatePosId();
-    const activationCode = generateActivationCode();
-
-    const posDevice = await prisma.pOSDevice.create({
-      data: {
-        posId,
-        merchantId: merchant.id,
-        activationCode,
-        status: 'pending'
-      }
-    });
+    const posDevice = await createPosDevice(merchant.id);
 
     // Notify merchant
     await prisma.merchantNotification.create({
@@ -951,7 +963,7 @@ router.post('/admin/merchants/:merchantId/pos-devices', authenticateAdmin, async
         merchantId: merchant.id,
         type: 'pos_created',
         title: 'New POS Device Added',
-        message: `A new POS device has been created! Activation Code: ${activationCode}`
+        message: `A new POS device has been created! Activation Code: ${posDevice.activationCode}`
       }
     });
 
@@ -1139,11 +1151,7 @@ router.post('/merchant/login', loginLimiter, checkBruteForce, validate(schemas.m
 
 router.post('/merchant/pos-devices', authenticateMerchant, async (req, res) => {
   try {
-    const posId = await generatePosId();
-    const activationCode = generateActivationCode();
-    const posDevice = await prisma.pOSDevice.create({
-      data: { posId, merchantId: req.merchant.id, activationCode }
-    });
+    const posDevice = await createPosDevice(req.merchant.id);
     res.json({ pos_id: posDevice.posId, activation_code: posDevice.activationCode, status: posDevice.status });
   } catch (error) {
     res.status(500).json({ error: error.message });
