@@ -88,6 +88,8 @@ export default function App() {
   const [loading, setLoading]   = useState(false)
   const [verifying, setVerifying] = useState(!!localStorage.getItem('posCredentials'))
   const [msg, setMsg]           = useState('')
+  const [systemOnline, setSystemOnline] = useState(true)
+  const [systemMessage, setSystemMessage] = useState('')
   const [view, setView]         = useState('activation')
   const [customers, setCustomers] = useState([])
   const [orders, setOrders]      = useState([])
@@ -131,6 +133,31 @@ export default function App() {
     };
 
     verifyCredentials();
+  }, []);
+
+  // Check SYSTEM STATUS and device/merchant status periodically
+  useEffect(() => {
+    // Always check system status, even if not logged in
+    const checkSystemStatus = async () => {
+      try {
+        const res = await fetch(API + '/system/status');
+        if (res.ok) {
+          const data = await res.json();
+          setSystemOnline(data.online);
+          setSystemMessage(data.message || '');
+        }
+      } catch (e) {
+        // If we can't reach server, assume online?
+        setSystemOnline(true);
+      }
+    };
+
+    // Check immediately on mount
+    checkSystemStatus();
+
+    // Check every 5 seconds
+    const interval = setInterval(checkSystemStatus, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Check device/merchant status periodically
@@ -373,6 +400,30 @@ export default function App() {
   }
 
   /* ── SCREENS ──────────────────────────────────────────────────────────────── */
+
+  // MAINTENANCE SCREEN - SHOW FIRST IF SYSTEM IS OFFLINE!
+  if (!systemOnline) return (
+    <>
+      <style>{G}</style>
+      <div className="scr">
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔴</div>
+          <h1 style={{ fontSize: '1.7rem', fontWeight: '600', color: '#e8e0d0', marginBottom: '0.5rem' }}>System Unavailable</h1>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+            {systemMessage || 'The system is currently offline for maintenance. Please try again later.'}
+          </p>
+          <div style={{ background: 'rgba(212,170,85,0.14)', border: '1px solid rgba(212,170,85,0.28)', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem' }}>
+            <p style={{ fontSize: '0.8rem', color: '#d4aa55', fontWeight: '600', margin: 0 }}>Your account and data are safe. The system will be back online shortly.</p>
+          </div>
+          {creds && (
+            <button onClick={doLogout} style={{ width: '100%', padding: '0.75rem', background: 'none', color: 'rgba(232,224,208,0.62)', border: 'none', fontSize: '0.875rem', cursor: 'pointer', marginTop: '0.5rem' }}>
+              Logout
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  )
 
   if (verifying) return (
     <>
