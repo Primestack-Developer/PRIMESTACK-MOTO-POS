@@ -76,7 +76,94 @@ const GLOBAL_CSS = `
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #86efac; border-radius: 3px; }
   @keyframes bellPulse { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{transform:scale(1.12);box-shadow:0 0 0 10px rgba(239,68,68,0)} }
+  @keyframes loginFloat { 0%,100%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(0,-18px,0) scale(1.05)} }
+  @keyframes loginPulse { 0%,100%{opacity:0.45} 50%{opacity:0.85} }
+  .login-shell { min-height:100vh; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:2rem; }
+  .login-grid { position:relative; z-index:2; width:min(1120px, 100%); display:grid; grid-template-columns:1.05fr 0.95fr; gap:1.5rem; align-items:stretch; }
+  .login-card { position:relative; border:1px solid rgba(255,255,255,0.12); background:rgba(7,10,18,0.58); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 24px 80px rgba(0,0,0,0.45); border-radius:28px; overflow:hidden; }
+  .login-card::before { content:''; position:absolute; inset:0; padding:1px; border-radius:inherit; background:linear-gradient(135deg, color-mix(in srgb, var(--login-accent) 70%, white 30%), rgba(255,255,255,0.08), color-mix(in srgb, var(--login-accent-2) 72%, white 28%)); -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
+  .login-info { padding:2.2rem; display:flex; flex-direction:column; justify-content:space-between; min-height:640px; }
+  .login-form-card { padding:2rem; display:flex; flex-direction:column; justify-content:center; min-height:640px; }
+  .login-overline { display:inline-flex; align-items:center; gap:0.5rem; width:max-content; padding:0.45rem 0.8rem; border-radius:999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:#dbeafe; font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+  .login-title { margin:1rem 0 0.75rem; color:#fff; font-size:clamp(2rem, 5vw, 3.8rem); line-height:0.96; letter-spacing:-0.04em; max-width:8ch; }
+  .login-copy { margin:0; color:rgba(226,232,240,0.82); font-size:1rem; line-height:1.7; max-width:56ch; }
+  .login-feature-list { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:0.85rem; margin-top:1.6rem; }
+  .login-feature { padding:1rem; border-radius:18px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); }
+  .login-feature-label { margin:0 0 0.35rem; color:rgba(226,232,240,0.72); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; }
+  .login-feature-value { margin:0; color:#fff; font-size:0.95rem; font-weight:700; line-height:1.4; }
+  .login-preview { margin-top:auto; border-radius:22px; padding:1.15rem; background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.1); }
+  .login-preview-top { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+  .login-preview-chip { display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.7rem; border-radius:999px; background:rgba(255,255,255,0.06); color:#fff; font-size:0.75rem; font-weight:700; }
+  .login-preview-line { height:10px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)); margin-bottom:0.75rem; }
+  .login-preview-line:last-child { margin-bottom:0; width:72%; }
+  .login-logo-wrap { display:flex; align-items:center; gap:0.9rem; margin-bottom:1.1rem; }
+  .login-logo-mark { width:56px; height:56px; border-radius:18px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--login-accent), var(--login-accent-2)); color:#fff; font-size:1.35rem; box-shadow:0 14px 36px color-mix(in srgb, var(--login-accent) 42%, transparent 58%); }
+  .login-panel-title { margin:0; color:#fff; font-size:1.75rem; font-weight:800; letter-spacing:-0.03em; }
+  .login-panel-copy { margin:0.3rem 0 0; color:rgba(226,232,240,0.7); font-size:0.92rem; }
+  .login-mode-switch { display:flex; gap:0.4rem; margin:1.35rem 0 1.25rem; padding:0.3rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
+  .login-mode-btn { flex:1; border:none; border-radius:12px; padding:0.8rem 0.9rem; background:transparent; color:rgba(226,232,240,0.68); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.18s ease; }
+  .login-mode-btn.active { background:linear-gradient(135deg, color-mix(in srgb, var(--login-accent) 20%, rgba(255,255,255,0.08)), color-mix(in srgb, var(--login-accent-2) 16%, rgba(255,255,255,0.03))); color:#fff; box-shadow:0 10px 28px rgba(0,0,0,0.18); }
+  .login-field-label { display:block; margin-bottom:0.45rem; color:#e2e8f0; font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; }
+  .login-alert { padding:0.85rem 0.95rem; border-radius:16px; margin-bottom:1rem; font-size:0.88rem; border:1px solid transparent; }
+  .login-alert.error { background:rgba(239,68,68,0.12); color:#fecaca; border-color:rgba(248,113,113,0.25); }
+  .login-alert.success { background:rgba(34,197,94,0.12); color:#bbf7d0; border-color:rgba(74,222,128,0.2); }
+  .login-submit { width:100%; padding:0.95rem 1rem; border:none; border-radius:16px; background:linear-gradient(135deg, var(--login-accent), var(--login-accent-2)); color:#fff; font-size:0.96rem; font-weight:800; cursor:pointer; box-shadow:0 16px 36px color-mix(in srgb, var(--login-accent) 38%, transparent 62%); }
+  .login-note { margin-top:0.9rem; padding:0.9rem 0.95rem; border-radius:16px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.2); color:#fde68a; font-size:0.82rem; line-height:1.6; }
+  .login-theme-panel { position:absolute; left:2rem; bottom:2rem; z-index:3; padding:0.5rem; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(7,10,18,0.52); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 12px 32px rgba(0,0,0,0.35); }
+  .login-theme-thumbs { display:flex; align-items:center; gap:0.55rem; }
+  .login-theme-thumb { width:22px; height:22px; border-radius:999px; border:2px solid transparent; cursor:pointer; transition:transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+  .login-theme-thumb:hover { transform:scale(1.14); }
+  .login-theme-thumb.active { border-color:#fff; transform:scale(1.14); box-shadow:0 0 14px color-mix(in srgb, var(--login-accent) 72%, white 28%); }
+  .login-bg-orb { position:absolute; border-radius:50%; filter:blur(10px); animation:loginFloat 10s ease-in-out infinite; opacity:0.8; pointer-events:none; }
+  .login-bg-orb.one { width:380px; height:380px; top:-80px; left:-60px; background:radial-gradient(circle, color-mix(in srgb, var(--login-accent) 70%, white 30%), transparent 70%); }
+  .login-bg-orb.two { width:440px; height:440px; right:-120px; top:8%; background:radial-gradient(circle, color-mix(in srgb, var(--login-accent-2) 62%, white 38%), transparent 72%); animation-duration:14s; }
+  .login-bg-orb.three { width:320px; height:320px; bottom:-90px; right:18%; background:radial-gradient(circle, rgba(255,255,255,0.16), transparent 72%); animation-duration:12s; }
+  .login-grid-lines { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); background-size:34px 34px; mask-image:radial-gradient(circle at center, black 40%, transparent 88%); opacity:0.18; pointer-events:none; }
+  .login-ring { position:absolute; inset:auto 12% 8% auto; width:340px; height:340px; border-radius:50%; border:1px solid rgba(255,255,255,0.09); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04); animation:loginPulse 4.5s ease-in-out infinite; pointer-events:none; }
+  .login-ring::before, .login-ring::after { content:''; position:absolute; inset:28px; border-radius:50%; border:1px solid rgba(255,255,255,0.08); }
+  .login-ring::after { inset:62px; border-color:rgba(255,255,255,0.05); }
+  @media (max-width: 980px) {
+    .login-grid { grid-template-columns:1fr; }
+    .login-info, .login-form-card { min-height:auto; }
+    .login-feature-list { grid-template-columns:1fr; }
+    .login-theme-panel { position:static; margin-top:1.25rem; width:max-content; }
+  }
+  @media (max-width: 640px) {
+    .login-shell { padding:1rem; }
+    .login-info, .login-form-card { padding:1.25rem; }
+    .login-logo-wrap { flex-direction:column; align-items:flex-start; }
+  }
 `
+
+const LOGIN_THEMES = [
+  {
+    name: 'Magma & Cyan',
+    accent: '#00d2ff',
+    accent2: '#ff5500',
+    background: 'radial-gradient(circle at top left, rgba(0,210,255,0.16), transparent 34%), radial-gradient(circle at top right, rgba(255,85,0,0.18), transparent 38%), linear-gradient(135deg, #010102 0%, #050814 52%, #0a1320 100%)',
+    badge: 'Core Shield',
+    heading: 'Secure control for every Moto POS operation.',
+    copy: 'A cinematic admin login with the dark energy, glass surfaces, and live accent switching from your theme file.',
+  },
+  {
+    name: 'Neon Void',
+    accent: '#ff00ff',
+    accent2: '#00ff88',
+    background: 'radial-gradient(circle at 18% 16%, rgba(255,0,255,0.18), transparent 34%), radial-gradient(circle at 88% 10%, rgba(0,255,136,0.16), transparent 34%), linear-gradient(135deg, #020005 0%, #11001a 48%, #07161a 100%)',
+    badge: 'Night Protocol',
+    heading: 'High-contrast access built for late-hour operations.',
+    copy: 'This variation pushes the neon side of the original concept while preserving your existing password and recovery flows.',
+  },
+  {
+    name: 'Solar Flare',
+    accent: '#ffdd00',
+    accent2: '#3366ff',
+    background: 'radial-gradient(circle at 20% 18%, rgba(255,221,0,0.18), transparent 32%), radial-gradient(circle at 82% 14%, rgba(51,102,255,0.18), transparent 32%), linear-gradient(135deg, #000103 0%, #1a1300 52%, #091327 100%)',
+    badge: 'Flare Watch',
+    heading: 'Bright signal paths for merchants, verifications, and risk control.',
+    copy: 'The form stays fully functional while the login page takes on the premium visual treatment from the theme prototype.',
+  },
+]
 
 export { ErrorBoundary }
 export default function App() {
@@ -87,6 +174,7 @@ export default function App() {
   const [loginEmail,    setLoginEmail]    = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginMode,     setLoginMode]     = useState('password') // 'password' | 'recovery'
+  const [loginTheme,    setLoginTheme]    = useState(0)
   const [recoveryKey,   setRecoveryKey]   = useState('')
   const [msg, setMsg] = useState(null)
 
@@ -541,58 +629,153 @@ export default function App() {
   const filteredPosDevices = filterMerchantId ? (posDevices||[]).filter(p=>p.merchantId===filterMerchantId) : posDevices
   const filteredOrders     = filterMerchantId ? (orders||[]).filter(o=>o.merchantId===filterMerchantId)     : orders
   const filterLabel        = filterMerchantId ? merchants.find(m=>m.id===filterMerchantId) : null
+  const activeLoginTheme = LOGIN_THEMES[loginTheme] || LOGIN_THEMES[0]
 
   // ── LOGIN PAGE ──────────────────────────────────────────────────────────────
   if (!token) return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:`linear-gradient(135deg, ${C.sidebar} 0%, #2d6a4f 100%)`}}>
-        <div className="lift" style={{background:C.white,borderRadius:'20px',padding:'2.5rem',width:'100%',maxWidth:'420px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
-          <div style={{textAlign:'center',marginBottom:'1.5rem'}}>
-            <img src="/logo.png" alt="PrimeStack" style={{height:'56px',objectFit:'contain',marginBottom:'1rem'}} onError={e=>{e.target.style.display='none'}} />
-            <h1 style={{fontSize:'1.5rem',fontWeight:'800',color:C.text,margin:0}}>Admin Panel</h1>
-            <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 0'}}>
-              {loginMode==='password'?'Sign in to PrimeStack':'Emergency Recovery Access'}
-            </p>
-          </div>
+      <div
+        className="login-shell"
+        style={{
+          background: activeLoginTheme.background,
+          '--login-accent': activeLoginTheme.accent,
+          '--login-accent-2': activeLoginTheme.accent2,
+        }}
+      >
+        <div className="login-bg-orb one" />
+        <div className="login-bg-orb two" />
+        <div className="login-bg-orb three" />
+        <div className="login-grid-lines" />
+        <div className="login-ring" />
 
-          {/* Mode tabs */}
-          <div style={{display:'flex',gap:'0.375rem',marginBottom:'1.5rem',background:C.bg,borderRadius:'10px',padding:'0.25rem'}}>
-            {[['password','🔐 Password'],['recovery','🔑 Recovery Key']].map(([m,l])=>(
-              <button key={m} onClick={()=>{setLoginMode(m);setMsg(null)}}
-                style={{flex:1,padding:'0.5rem',background:loginMode===m?C.white:'transparent',color:loginMode===m?C.text:C.textMuted,border:'none',borderRadius:'8px',fontSize:'0.78rem',fontWeight:loginMode===m?'700':'500',cursor:'pointer',boxShadow:loginMode===m?'0 1px 4px rgba(0,0,0,0.1)':'none',transition:'all 0.15s'}}>
-                {l}
-              </button>
-            ))}
-          </div>
+        <div className="login-grid">
+          <section className="login-card login-info">
+            <div>
+              <span className="login-overline">{activeLoginTheme.badge}</span>
+              <h1 className="login-title">{activeLoginTheme.heading}</h1>
+              <p className="login-copy">{activeLoginTheme.copy}</p>
 
-          {msg && <div style={{padding:'0.75rem',background:msg.t==='e'?C.redLight:C.accentLight,color:msg.t==='e'?C.red:C.accentDark,borderRadius:'10px',marginBottom:'1rem',fontSize:'0.875rem'}}>{msg.text}</div>}
+              <div className="login-feature-list">
+                <div className="login-feature">
+                  <p className="login-feature-label">Access</p>
+                  <p className="login-feature-value">Admin password and recovery key modes stay active.</p>
+                </div>
+                <div className="login-feature">
+                  <p className="login-feature-label">Monitoring</p>
+                  <p className="login-feature-value">Transactions, verifications, and merchant alerts are one sign-in away.</p>
+                </div>
+                <div className="login-feature">
+                  <p className="login-feature-label">Theme</p>
+                  <p className="login-feature-value">{activeLoginTheme.name} is applied live from the selector below.</p>
+                </div>
+              </div>
+            </div>
 
-          {loginMode==='password' && (
-            <form onSubmit={handleLogin}>
-              <Fld label="Email"><input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} required style={INP} placeholder="admin@primestack.com"/></Fld>
-              <Fld label="Password"><input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} required style={INP} placeholder="••••••••"/></Fld>
-              <button type="submit" className="lift" style={{...BTNP,width:'100%',padding:'0.875rem',fontSize:'1rem',marginTop:'0.5rem'}}>Sign In</button>
-            </form>
-          )}
+            <div className="login-preview">
+              <div className="login-preview-top">
+                <span className="login-preview-chip">Live Admin Surface</span>
+                <span className="login-preview-chip">Secure Session</span>
+              </div>
+              <div className="login-preview-line" style={{width:'88%'}} />
+              <div className="login-preview-line" style={{width:'96%'}} />
+              <div className="login-preview-line" style={{width:'78%'}} />
+            </div>
+          </section>
 
-          {loginMode==='recovery' && (
-            <form onSubmit={handleRecoveryLogin}>
-              <Fld label="Recovery Key">
-                <input type="text" value={recoveryKey} onChange={e=>setRecoveryKey(e.target.value.toUpperCase())}
-                  required placeholder="PS-RK-XXXXXXXXXXXXXXXXXXXXXXXX"
-                  style={{...INP,fontFamily:'monospace',fontSize:'0.78rem',letterSpacing:'0.04em'}}/>
-              </Fld>
-              <div style={{background:'#fef3c7',border:'1px solid #fde68a',borderRadius:'10px',padding:'0.75rem',marginBottom:'1rem'}}>
-                <p style={{fontSize:'0.78rem',color:'#92400e',margin:0,fontWeight:'500'}}>
-                  This is a one-time key. A new key will be generated after use — save it immediately.
+          <section className="login-card login-form-card">
+            <div className="login-logo-wrap">
+              <div className="login-logo-mark">
+                <img src="/logo.png" alt="PrimeStack" style={{height:'34px',width:'34px',objectFit:'contain'}} onError={e=>{e.target.style.display='none'}} />
+              </div>
+              <div>
+                <h2 className="login-panel-title">Admin Login</h2>
+                <p className="login-panel-copy">
+                  {loginMode==='password' ? 'Sign in to PrimeStack Moto POS' : 'Use your one-time emergency recovery key'}
                 </p>
               </div>
-              <button type="submit" className="lift" style={{...BTNP,width:'100%',padding:'0.875rem',fontSize:'1rem',background:'#dc2626'}}>
-                Emergency Access
-              </button>
-            </form>
-          )}
+            </div>
+
+            <div className="login-mode-switch">
+              {[['password','Password'],['recovery','Recovery Key']].map(([m,l])=>(
+                <button
+                  key={m}
+                  type="button"
+                  className={`login-mode-btn ${loginMode===m ? 'active' : ''}`}
+                  onClick={()=>{setLoginMode(m);setMsg(null)}}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {msg && <div className={`login-alert ${msg.t==='e' ? 'error' : 'success'}`}>{msg.text}</div>}
+
+            {loginMode==='password' && (
+              <form onSubmit={handleLogin}>
+                <div style={{marginBottom:'1rem'}}>
+                  <label className="login-field-label">Email</label>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={e=>setLoginEmail(e.target.value)}
+                    required
+                    placeholder="admin@primestack.com"
+                    style={{...INP, background:'rgba(255,255,255,0.06)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.12)'}}
+                  />
+                </div>
+                <div style={{marginBottom:'1.2rem'}}>
+                  <label className="login-field-label">Password</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={e=>setLoginPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    style={{...INP, background:'rgba(255,255,255,0.06)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.12)'}}
+                  />
+                </div>
+                <button type="submit" className="lift login-submit">Access Dashboard</button>
+              </form>
+            )}
+
+            {loginMode==='recovery' && (
+              <form onSubmit={handleRecoveryLogin}>
+                <div style={{marginBottom:'1rem'}}>
+                  <label className="login-field-label">Recovery Key</label>
+                  <input
+                    type="text"
+                    value={recoveryKey}
+                    onChange={e=>setRecoveryKey(e.target.value.toUpperCase())}
+                    required
+                    placeholder="PS-RK-XXXXXXXXXXXXXXXXXXXXXXXX"
+                    style={{...INP, background:'rgba(255,255,255,0.06)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.12)', fontFamily:'monospace', fontSize:'0.8rem', letterSpacing:'0.04em'}}
+                  />
+                </div>
+                <div className="login-note">
+                  This key works once only. After successful access, save the newly generated replacement key immediately.
+                </div>
+                <button type="submit" className="lift login-submit" style={{marginTop:'1rem'}}>
+                  Emergency Access
+                </button>
+              </form>
+            )}
+          </section>
+        </div>
+
+        <div className="login-theme-panel">
+          <div className="login-theme-thumbs">
+            {LOGIN_THEMES.map((theme, index)=>(
+              <button
+                key={theme.name}
+                type="button"
+                className={`login-theme-thumb ${loginTheme===index ? 'active' : ''}`}
+                onClick={()=>setLoginTheme(index)}
+                title={theme.name}
+                style={{background:`linear-gradient(135deg, ${theme.accent}, ${theme.accent2})`}}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </>
