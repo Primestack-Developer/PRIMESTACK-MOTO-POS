@@ -104,37 +104,41 @@ export default function App() {
   const playNotifSound = React.useCallback(() => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const osc1 = ctx.createOscillator()
-      const gain1 = ctx.createGain()
-      const osc2 = ctx.createOscillator()
-      const gain2 = ctx.createGain()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
 
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
 
-      osc1.frequency.value = 880
-      osc2.frequency.value = 1100
+      // Friendly notification tone (two soft beeps)
+      osc.frequency.value = 523.25 // C5 note
+      osc.type = 'sine'
 
-      gain1.gain.setValueAtTime(0.8, ctx.currentTime)
-      gain2.gain.setValueAtTime(0.8, ctx.currentTime)
-      
-      osc1.start(ctx.currentTime)
-      osc2.start(ctx.currentTime)
-      
-      osc1.stop(ctx.currentTime + 0.2)
-      osc2.stop(ctx.currentTime + 0.2)
+      // First beep
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      osc.start(ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15)
+      osc.stop(ctx.currentTime + 0.15)
 
+      // Second beep after short pause
       setTimeout(() => {
-        try { osc1.start(ctx.currentTime + 0.3); osc2.start(ctx.currentTime + 0.3) } catch(e){}
-        try { osc1.stop(ctx.currentTime + 0.5); osc2.stop(ctx.currentTime + 0.5) } catch(e){}
-      }, 300)
-
-      setTimeout(() => {
-        try { osc1.start(ctx.currentTime + 0.6); osc2.start(ctx.currentTime + 0.6) } catch(e){}
-        try { osc1.stop(ctx.currentTime + 0.8); osc2.stop(ctx.currentTime + 0.8) } catch(e){}
-      }, 600)
+        try {
+          const ctx2 = new (window.AudioContext || window.webkitAudioContext)()
+          const osc2 = ctx2.createOscillator()
+          const gain2 = ctx2.createGain()
+          
+          osc2.connect(gain2)
+          gain2.connect(ctx2.destination)
+          
+          osc2.frequency.value = 659.25 // E5 note
+          osc2.type = 'sine'
+          
+          gain2.gain.setValueAtTime(0.3, ctx2.currentTime)
+          osc2.start(ctx2.currentTime)
+          gain2.gain.exponentialRampToValueAtTime(0.01, ctx2.currentTime + 0.15)
+          osc2.stop(ctx2.currentTime + 0.15)
+        } catch(e) {}
+      }, 150)
     } catch(e) {}
   }, [])
 
