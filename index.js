@@ -969,7 +969,7 @@ router.post('/admin/merchants/:merchantId/pos-devices', authenticateAdmin, async
 
     res.json({
       pos_id: posDevice.posId,
-      activation_code: activationCode,
+      activation_code: posDevice.activationCode,
       status: posDevice.status
     });
   } catch (error) {
