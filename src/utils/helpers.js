@@ -11,8 +11,8 @@ function generateMerchantId() {
 }
 
 function generatePosId() {
+  const random = crypto.randomBytes(4).toString('hex').toUpperCase();
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `POS-${timestamp}-${random}`;
 }
 

@@ -34,6 +34,11 @@ class MerchantService {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         const posId = generatePosId();
+        const existing = await prisma.pOSDevice.findUnique({ where: { posId } });
+        if (existing) {
+          continue;
+        }
+
         const activationCode = generateActivationCode();
         const posDevice = await prisma.pOSDevice.create({
           data: {
