@@ -16,6 +16,7 @@ const NAV = [
   { id:'pos',       label:'POS Devices', icon:'🖥' },
   { id:'customers', label:'Customers',   icon:'👥' },
   { id:'payments',  label:'Payments',    icon:'💳' },
+  { id:'transactions', label:'Transactions', icon:'📊' },
   { id:'settings',  label:'Settings',    icon:'⚙'  },
 ]
 
@@ -91,6 +92,7 @@ export default function App() {
   const [posDevices,  setPosDevices]  = useState([])
   const [customers,   setCustomers]   = useState([])
   const [orders,      setOrders]      = useState([])
+  const [transactions, setTransactions] = useState([])
   const [showAddCust, setShowAddCust] = useState(false)
   const [newPosData,  setNewPosData]  = useState(null)
   const [newCust,     setNewCust]     = useState({name:'',email:'',phone:'',billingAddress:''})
@@ -210,6 +212,7 @@ export default function App() {
     get(`${API}/merchant/pos-devices`, d => d.posDevices && setPosDevices(d.posDevices))
     get(`${API}/merchant/customers`,   d => d.customers  && setCustomers(d.customers))
     get(`${API}/merchant/orders`,      d => d.orders     && setOrders(d.orders))
+    get(`${API}/merchant/transactions`, d => d.transactions && setTransactions(d.transactions))
     get(`${API}/merchant/notifications`, d => {
       if (d.notifications) {
         const newUnread = d.notifications.filter(n => !n.read).length
@@ -890,6 +893,24 @@ export default function App() {
                     <div style={{background:C.accentLight,borderRadius:'10px',padding:'0.875rem'}}><p style={{fontSize:'0.68rem',color:C.accent,fontWeight:'700',textTransform:'uppercase',margin:'0 0 0.3rem'}}>Status</p><Bdg s={selOrder.status}/></div>
                   </div>
                   {selOrder.payment?.receiptUrl&&<a href={selOrder.payment.receiptUrl} target="_blank" rel="noreferrer" style={{...BS,textDecoration:'none',display:'inline-flex'}}>&#128196; Receipt</a>}
+                </Card>
+              </div>
+            )}
+
+            {/* TRANSACTIONS */}
+            {tab==='transactions'&&(
+              <div>
+                <PH title="Transactions" sub={`${transactions.length} total`}/>
+                <Card>
+                  <Tbl heads={['Transaction ID','Amount','Type','POS Device','Date']}
+                    rows={transactions.map(t=>[
+                      <B accent>{t.id}</B>,
+                      <B>{t.currency} {fmt(t.amount)}</B>,
+                      <span style={{textTransform:'capitalize'}}>{t.type}</span>,
+                      t.posDevice?.posId || 'N/A',
+                      new Date(t.createdAt).toLocaleString()
+                    ])}
+                    empty="No transactions yet"/>
                 </Card>
               </div>
             )}
