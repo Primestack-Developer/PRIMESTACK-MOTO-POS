@@ -102,7 +102,7 @@ export default function App() {
   const token = creds ? creds.api_token : null;
   const AH = token ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } : {};
 
-  // Verify stored credentials on app load
+  // Verify stored credentials on app load - CLEAR OLD DATA FIRST if needed!
   useEffect(() => {
     if (!creds) {
       setVerifying(false);
@@ -113,15 +113,17 @@ export default function App() {
       try {
         const res = await fetch(API + '/pos/customers', { headers: AH });
         if (res.ok) {
+          // Credentials are valid, let's also get fresh device/merchant info
+          // But for now proceed to home
           setView('home');
         } else {
-          // Invalid credentials - clear localStorage
+          // Invalid credentials - CLEAR EVERYTHING!
           localStorage.removeItem('posCredentials');
           setCreds(null);
           setView('activation');
         }
       } catch (e) {
-        // Network error, but let's still try to use cached credentials
+        // Network error - still use cached but let's let user know?
         setView('home');
       } finally {
         setVerifying(false);
@@ -241,10 +243,21 @@ export default function App() {
   }
 
   const doLogout = () => {
-    localStorage.removeItem('posCredentials')
+    // CLEAR ALL LOCAL STORAGE!
+    localStorage.clear()
     setCreds(null)
     setView('activation')
     setPd({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
+    setCode('')
+    setCustomers([])
+    setOrders([])
+    setSelOrder(null)
+    setPendingCreds(null)
+    setPolling(false)
+    setCurOrder(null)
+    setLinkOpened(false)
+    setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
+    setMsg('')
   }
 
   const doAddCust = async (e) => {
