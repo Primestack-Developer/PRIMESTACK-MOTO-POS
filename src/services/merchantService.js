@@ -29,24 +29,34 @@ class MerchantService {
   }
 
   static async createPOSDevice(merchantId, deviceModel, deviceSerial) {
-    try {
-      const posId = generatePosId();
-      const activationCode = generateActivationCode();
-      const posDevice = await prisma.pOSDevice.create({
-        data: {
-          posId,
-          merchantId,
-          activationCode,
-          deviceModel,
-          deviceSerial,
-          status: 'pending'
+    let lastError;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const posId = generatePosId();
+        const activationCode = generateActivationCode();
+        const posDevice = await prisma.pOSDevice.create({
+          data: {
+            posId,
+            merchantId,
+            activationCode,
+            deviceModel,
+            deviceSerial,
+            status: 'pending'
+          }
+        });
+        return posDevice;
+      } catch (error) {
+        lastError = error;
+        const isUniqueConstraintError = error?.code === 'P2002' || /Unique constraint failed|Unique.*constraint/i.test(error?.message || '');
+        if (!isUniqueConstraintError || attempt === 4) {
+          logger.error('Failed to create POS device', { error: error.message });
+          throw error;
         }
-      });
-      return posDevice;
-    } catch (error) {
-      logger.error('Failed to create POS device', { error: error.message });
-      throw error;
+      }
     }
+
+    throw lastError;
   }
 
   static async activatePOSDevice(posId, activationCode) {

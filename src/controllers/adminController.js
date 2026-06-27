@@ -171,18 +171,14 @@ async function deleteMerchant(req, res) {
 }
 
 async function createPOSDevice(req, res) {
-  const { merchantId } = req.params;
-  const posId = Math.random().toString(36).substring(2, 10).toUpperCase();
-  const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-  const device = await prisma.pOSDevice.create({
-    data: {
-      posId,
-      merchantId,
-      activationCode,
-      status: 'pending'
-    }
-  });
-  res.json({ posId: device.posId, activationCode: device.activationCode });
+  try {
+    const { merchantId } = req.params;
+    const device = await MerchantService.createPOSDevice(merchantId, null, null);
+    res.json({ posId: device.posId, activationCode: device.activationCode });
+  } catch (error) {
+    logger.error('Failed to create POS device from admin', { error: error.message });
+    res.status(500).json({ error: error.message });
+  }
 }
 
 async function updatePOSDeviceStatus(req, res) {
