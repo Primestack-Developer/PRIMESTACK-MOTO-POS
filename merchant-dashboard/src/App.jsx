@@ -51,6 +51,16 @@ input:focus,textarea:focus{
 }
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-thumb{background:${C.accent};border-radius:3px}
+
+/* MOBILE RESPONSIVE STYLES */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 `
 
 export class ErrorBoundary extends React.Component {
@@ -75,6 +85,7 @@ export default function App() {
   const [tab,      setTab]      = useState('dashboard')
   const [msg,      setMsg]      = useState(null)
   const [verifying, setVerifying] = useState(!!localStorage.getItem('merchantToken'))
+  const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile sidebar state
   const [loginEmail,    setLoginEmail]    = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [posDevices,  setPosDevices]  = useState([])
@@ -99,6 +110,7 @@ export default function App() {
   const [verifyDocs,  setVerifyDocs]  = useState([])        // uploaded documents
   const [verifyNotes, setVerifyNotes] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
   // Notification sound
   const playNotifSound = React.useCallback(() => {
@@ -140,6 +152,15 @@ export default function App() {
         } catch(e) {}
       }, 150)
     } catch(e) {}
+  }, [])
+
+  // Handle window resizing
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   const H = { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }
@@ -476,8 +497,35 @@ export default function App() {
       <style>{CSS}</style>
       <div style={{display:'flex',minHeight:'100vh',background:'radial-gradient(circle at top, rgba(200,168,112,0.1), transparent 20%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)'}}>
 
+        {/* MOBILE SIDEBAR OVERLAY */}
+        {isMobile && sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position:'fixed',
+              top:0, left:0, right:0, bottom:0,
+              background:'rgba(0,0,0,0.5)',
+              zIndex:99,
+              animation:'fadeIn 0.2s ease-out'
+            }}
+          />
+        )}
+
         {/* SIDEBAR */}
-        <aside style={{width:'220px',background:C.sidebar,display:'flex',flexDirection:'column',position:'sticky',top:0,height:'100vh',flexShrink:0}}>
+        <aside style={{
+          width:'220px',
+          background:C.sidebar,
+          display:'flex',
+          flexDirection:'column',
+          position: isMobile ? 'fixed' : 'sticky',
+          top:0,
+          height:'100vh',
+          flexShrink:0,
+          zIndex: isMobile ? 100 : 1,
+          transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+          transition: isMobile ? 'transform 0.3s ease-out' : 'none',
+          boxShadow: isMobile && sidebarOpen ? '0 8px 32px rgba(0,0,0,0.3)' : 'none'
+        }}>
           <div style={{padding:'1.25rem',borderBottom:'1px solid rgba(255,255,255,0.08)',display:'flex',alignItems:'center',gap:'0.75rem'}}>
             <img src="/logo.png" alt="Logo" style={{height:'34px',objectFit:'contain',borderRadius:'6px'}} onError={e=>e.target.style.display='none'}/>
             <span style={{color:'white',fontWeight:'800',fontSize:'0.95rem'}}>PrimeStack</span>
@@ -492,7 +540,7 @@ export default function App() {
           <nav style={{flex:1,padding:'1rem 0.75rem',overflowY:'auto'}}>
             <p style={{color:'rgba(255,255,255,0.3)',fontSize:'0.65rem',fontWeight:'700',textTransform:'uppercase',letterSpacing:'0.1em',padding:'0 0.625rem',margin:'0 0 0.5rem'}}>Menu</p>
             {NAV.map(n=>(
-              <button key={n.id} className="nb" onClick={()=>nav(n.id)}
+              <button key={n.id} className="nb" onClick={()=>{nav(n.id); if(isMobile) setSidebarOpen(false);}}
                 style={{width:'100%',display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.625rem 0.75rem',background:tab===n.id?C.accent:'transparent',color:tab===n.id?'white':'rgba(255,255,255,0.65)',border:'none',borderRadius:'10px',cursor:'pointer',fontSize:'0.875rem',fontWeight:tab===n.id?'700':'400',textAlign:'left',marginBottom:'2px'}}>
                 <span style={{fontSize:'1rem',width:'20px',textAlign:'center'}}>{n.icon}</span>
                 {n.label}
@@ -509,12 +557,40 @@ export default function App() {
 
         {/* MAIN */}
         <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0}}>
-          <header style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:'0 2rem',height:'62px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,boxShadow:'0 1px 8px rgba(22,163,74,0.07)'}}>
-            <div>
-              <h1 style={{fontSize:'1.1rem',fontWeight:'800',color:C.text,margin:0}}>{NAV.find(n=>n.id===tab)?.label||'Dashboard'}</h1>
-              <p style={{fontSize:'0.72rem',color:C.textMuted,margin:0}}>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+          <header style={{
+            background:C.white,
+            borderBottom:`1px solid ${C.border}`,
+            padding: isMobile ? '0 1rem' : '0 2rem',
+            height:'62px',
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'space-between',
+            flexShrink:0,
+            boxShadow:'0 1px 8px rgba(22,163,74,0.07)'
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:'0.75rem'}}>
+              {/* HAMBURGER MENU BUTTON (only mobile) */}
+              {isMobile && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  style={{
+                    background:'none',
+                    border:'none',
+                    cursor:'pointer',
+                    padding:'0.3rem 0.5rem',
+                    fontSize:'1.3rem',
+                    color:C.text
+                  }}
+                >
+                  ☰
+                </button>
+              )}
+              <div>
+                <h1 style={{fontSize:'1.1rem',fontWeight:'800',color:C.text,margin:0}}>{NAV.find(n=>n.id===tab)?.label||'Dashboard'}</h1>
+                <p style={{fontSize:'0.72rem',color:C.textMuted,margin:0}}>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+              </div>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:'0.875rem'}}>
+            <div style={{display:'flex',alignItems:'center',gap: isMobile ? '0.5rem' : '0.875rem'}}>
               {/* Notification Bell */}
               <div style={{position:'relative'}}>
                 <button onClick={()=>setShowNotif(!showNotif)}
@@ -527,7 +603,19 @@ export default function App() {
                   )}
                 </button>
                 {showNotif&&(
-                  <div style={{position:'absolute',right:0,top:'110%',width:'340px',background:C.white,borderRadius:'14px',boxShadow:'0 8px 32px rgba(0,0,0,0.15)',border:`1px solid ${C.border}`,zIndex:100,maxHeight:'400px',overflowY:'auto'}}>
+                  <div style={{
+                    position:'absolute',
+                    right: isMobile ? '-50px' : 0,
+                    top:'110%',
+                    width: isMobile ? '90vw' : '340px',
+                    background:C.white,
+                    borderRadius:'14px',
+                    boxShadow:'0 8px 32px rgba(0,0,0,0.15)',
+                    border:`1px solid ${C.border}`,
+                    zIndex:100,
+                    maxHeight:'400px',
+                    overflowY:'auto'
+                  }}>
                     <div style={{padding:'0.875rem 1rem',borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                       <p style={{fontWeight:'700',color:C.text,margin:0,fontSize:'0.9rem'}}>Notifications</p>
                       <button onClick={()=>setShowNotif(false)} style={{background:'none',border:'none',cursor:'pointer',color:C.textMuted,fontSize:'1rem'}}>✕</button>
@@ -554,17 +642,22 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <div style={{textAlign:'right'}}>
-                <p style={{fontSize:'0.8rem',fontWeight:'600',color:C.text,margin:0}}>{merchant?.businessName||'Merchant'}</p>
-                <p style={{fontSize:'0.7rem',color:C.textMuted,margin:0}}>{merchant?.email}</p>
-              </div>
-              <div style={{width:'38px',height:'38px',background:`linear-gradient(135deg,${C.accent},${C.accentDark})`,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:'800',fontSize:'0.9rem',boxShadow:'0 2px 8px rgba(22,163,74,0.4)'}}>{initials}</div>
+              {/* Hide the merchant info on mobile to save space */}
+              {!isMobile && (
+                <div style={{textAlign:'right'}}>
+                  <p style={{fontSize:'0.8rem',fontWeight:'600',color:C.text,margin:0}}>{merchant?.businessName||'Merchant'}</p>
+                  <p style={{fontSize:'0.7rem',color:C.textMuted,margin:0}}>{merchant?.email}</p>
+                </div>
+              )}
+              {!isMobile && (
+                <div style={{width:'38px',height:'38px',background:`linear-gradient(135deg,${C.accent},${C.accentDark})`,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:'800',fontSize:'0.9rem',boxShadow:'0 2px 8px rgba(22,163,74,0.4)'}}>{initials}</div>
+              )}
             </div>
           </header>
 
-          {msg&&<div style={{margin:'1rem 2rem 0',padding:'0.875rem 1rem',borderRadius:'12px',fontSize:'0.875rem',fontWeight:'500',background:msg.t==='s'?C.accentLight:C.redLight,color:msg.t==='s'?C.accentDark:C.red,border:`1px solid ${msg.t==='s'?C.accentMid:'#fecaca'}`}}>{msg.text}</div>}
+          {msg&&<div style={{margin: isMobile ? '1rem 1rem 0' : '1rem 2rem 0',padding:'0.875rem 1rem',borderRadius:'12px',fontSize:'0.875rem',fontWeight:'500',background:msg.t==='s'?C.accentLight:C.redLight,color:msg.t==='s'?C.accentDark:C.red,border:`1px solid ${msg.t==='s'?C.accentMid:'#fecaca'}`}}>{msg.text}</div>}
 
-          <main style={{flex:1,padding:'1.5rem 2rem',overflowY:'auto'}}>
+          <main style={{flex:1,padding: isMobile ? '1rem' : '1.5rem 2rem',overflowY:'auto'}}>
 
             {/* DASHBOARD */}
             {tab==='dashboard'&&(
@@ -587,7 +680,7 @@ export default function App() {
                   ))}
                 </div>
 
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1.5rem'}}>
+                <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',gap:'1rem',marginBottom:'1.5rem'}}>
                   <div style={{background:C.white,borderRadius:'14px',padding:'1.25rem',border:`1px solid ${C.border}`,boxShadow:'0 2px 8px rgba(22,163,74,0.08)'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
                       <div><h3 style={{fontSize:'0.9rem',fontWeight:'700',color:C.text,margin:0}}>Revenue Overview</h3><p style={{fontSize:'0.75rem',color:C.textMuted,margin:0}}>Last 7 days</p></div>
@@ -618,7 +711,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'1rem',alignItems:'start'}}>
+                <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : '1fr auto',gap:'1rem',alignItems:'start'}}>
                   <Card title="Recent Orders" extra={<Lnk onClick={()=>nav('payments')}>View all</Lnk>}>
                     <Tbl heads={['Order ID','Amount','Customer','Status','Date']}
                       rows={orders.slice(0,6).map(o=>[
