@@ -110,7 +110,6 @@ export default function App() {
   const [curOrder, setCurOrder] = useState(null)
   const [linkOpened, setLinkOpened] = useState(false)
   const [pd, setPd] = useState({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
-  const [card, setCard] = useState({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
   const [newCust, setNewCust]     = useState({ name: '', email: '', phone: '', billingAddress: '' })
 
   const token = creds ? creds.api_token : null;
@@ -309,7 +308,6 @@ export default function App() {
         setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
         await loadCustomers()
         setPd({ ...pd, customerId: customer.id, customerName: customer.name })
-        setCard(prev => ({ ...prev, cardholderName: customer.name || prev.cardholderName }))
         setView('customer-selection')
       }
     } catch (e) { console.error(e) }
@@ -319,62 +317,56 @@ export default function App() {
   const doCreateOrder = async () => {
     setLoading(true)
     setLinkOpened(false)
+    const paymentWindow = window.open('', '_blank')
     try {
       const amount = parseFloat(pd.amount)
-      const cardNumber = card.cardNumber.replace(/\D/g, '')
-      const cardExpiry = card.cardExpiry.replace(/\s/g, '')
-      const cardCvc = card.cardCvc.replace(/\D/g, '')
-      const cardholderName = card.cardholderName.trim()
 
       if (!amount || amount <= 0) {
         setMsg('Enter a valid amount')
-        setLoading(false)
-        return
-      }
-      if (!cardholderName || cardNumber.length < 12 || cardExpiry.length !== 5 || cardCvc.length < 3) {
-        setMsg('Enter valid card details to continue')
+        if (paymentWindow) paymentWindow.close()
         setLoading(false)
         return
       }
 
       const body = JSON.stringify({
-        amount,
-        currency: 'USD',
+        amount: Math.round(amount * 100),
+        currency: 'usd',
         description: pd.description || null,
-        customerId: pd.customerId || null,
-        cardholderName,
-        cardNumber,
-        cardExpiry,
-        cardCvc
+        customer_id: pd.customerId || null,
+        customer_name: pd.customerName || null
       })
-      const r = await fetch(API + '/pos/moto-payment', { method: 'POST', headers: AH, body })
+      const r = await fetch(API + '/pos/moto/orders', { method: 'POST', headers: AH, body })
       const d = await r.json()
 
       if (!r.ok || d.error) {
+        if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.error || d.message || 'Payment failed')
         setView('failed')
-      } else if (d.success) {
+      } else if (d.card_entry_url) {
         const order = {
-          orderId: d.orderId || d.order_id,
-          paymentIntentId: d.paymentIntentId,
-          payment: (d.cardBrand || d.cardLast4) ? {
-            cardBrand: d.cardBrand,
-            cardLast4: d.cardLast4
-          } : null
+          order_id: d.order_id,
+          paymentIntentId: d.payment_intent_id,
+          card_entry_url: d.card_entry_url,
+          payment: null
         }
         setMsg('')
         setCurOrder(order)
-        await loadOrders()
-        playSuccessSound()
-        setView('success')
+        if (paymentWindow) {
+          paymentWindow.location.href = d.card_entry_url
+          setLinkOpened(true)
+        }
+        setView('processing')
+        startPolling(d.order_id)
       } else {
+        if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.message || d.error || 'Failed to create order')
         setView('failed')
         setTimeout(() => setMsg(''), 5000)
       }
     } catch (e) {
+      if (paymentWindow) paymentWindow.close()
       playFailureSound()
       setMsg('Error creating order')
       setView('failed')
@@ -412,7 +404,6 @@ export default function App() {
 
   const doReset = () => {
     setPd({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
-    setCard({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
     setCurOrder(null)
     setLinkOpened(false)
     setMsg('')
@@ -421,14 +412,7 @@ export default function App() {
 
   const selectCust = (c) => {
     setPd({ ...pd, customerId: c ? c.id : '', customerName: c ? c.name : 'Walk-in Customer' })
-    setCard(prev => ({ ...prev, cardholderName: c?.name || prev.cardholderName }))
     setView('confirm-payment')
-  }
-
-  const formatCardNumber = (value) => value.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim()
-  const formatExpiry = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 4)
-    return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits
   }
 
   const doPrint = (order, payment, amount, custName, desc) => {
@@ -763,61 +747,15 @@ export default function App() {
 
           <div className="info-box" style={{ marginTop: '1rem' }}>
             <p style={{ fontSize: '0.72rem', color: '#c8a870', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', fontFamily: 'DM Mono, monospace' }}>
-              Enter Card Details
+              Stripe Hosted Card Entry
             </p>
-            <div className="fg">
-              <label className="lbl">Cardholder Name</label>
-              <input
-                className="inp"
-                type="text"
-                value={card.cardholderName}
-                onChange={e => setCard({ ...card, cardholderName: e.target.value })}
-                placeholder="Name on card"
-                autoComplete="cc-name"
-              />
-            </div>
-            <div className="fg">
-              <label className="lbl">Card Number</label>
-              <input
-                className="inp"
-                type="text"
-                inputMode="numeric"
-                value={card.cardNumber}
-                onChange={e => setCard({ ...card, cardNumber: formatCardNumber(e.target.value) })}
-                placeholder="4242 4242 4242 4242"
-                autoComplete="cc-number"
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="fg" style={{ marginBottom: 0 }}>
-                <label className="lbl">Expiry</label>
-                <input
-                  className="inp"
-                  type="text"
-                  inputMode="numeric"
-                  value={card.cardExpiry}
-                  onChange={e => setCard({ ...card, cardExpiry: formatExpiry(e.target.value) })}
-                  placeholder="MM/YY"
-                  autoComplete="cc-exp"
-                />
-              </div>
-              <div className="fg" style={{ marginBottom: 0 }}>
-                <label className="lbl">CVC</label>
-                <input
-                  className="inp"
-                  type="password"
-                  inputMode="numeric"
-                  value={card.cardCvc}
-                  onChange={e => setCard({ ...card, cardCvc: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  placeholder="CVC"
-                  autoComplete="cc-csc"
-                />
-              </div>
-            </div>
+            <p style={{ fontSize: '0.85rem', color: 'rgba(232,224,208,0.72)', lineHeight: 1.5, margin: 0 }}>
+              The card page will open in Stripe Checkout. Do not enter or store card details on this POS device.
+            </p>
           </div>
 
           <button onClick={doCreateOrder} className="g-btn lift" style={{ padding: '1.2rem', fontSize: '1.05rem', marginTop: '1rem' }} disabled={loading}>
-            {loading ? 'Processing Payment...' : 'Start MOTO Payment'}
+            {loading ? 'Opening Stripe...' : 'Open Stripe Card Entry'}
           </button>
         </div>
       </div>

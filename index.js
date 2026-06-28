@@ -324,7 +324,9 @@ async function handleStripeWebhook(req, res) {
       const order = await prisma.order.findUnique({ where: { orderId } });
       if (!order) return res.json({ received: true });
 
-      const charge = pi.charges?.data?.[0];
+      const charge = typeof pi.latest_charge === 'string'
+        ? await getStripe().charges.retrieve(pi.latest_charge)
+        : pi.latest_charge || pi.charges?.data?.[0];
       const billingName = (charge?.billing_details?.name || '').trim().toLowerCase();
       const expectedName = (order.expectedCardholder || pi.metadata?.expected_cardholder || '').trim().toLowerCase();
 
@@ -375,7 +377,7 @@ async function handleStripeWebhook(req, res) {
       }
 
       // Names match (or no expected name set) — normal success flow
-      await prisma.order.update({ where: { orderId }, data: { status: 'paid' } });
+      await prisma.order.update({ where: { orderId }, data: { status: 'paid', paymentIntentId: pi.id } });
 
       await prisma.payment.upsert({
         where: { orderId: order.id },
@@ -1390,6 +1392,7 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
   try {
     const { amount, currency, description, customer_id, customer_name } = req.body;
     const orderId = await generateOrderId();
+    const normalizedCurrency = (currency || 'usd').toLowerCase();
 
     // Resolve customer name for cardholder matching AND check verification status
     let expectedName = customer_name || null;
@@ -1411,24 +1414,28 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       }
     }
 
-    const paymentIntent = await getStripe().paymentIntents.create({
-      amount,
-      currency: currency || 'usd',
-      description: description || 'MOTO Payment',
-      payment_method_types: ['card'], // accept all card types worldwide
-      metadata: {
-        moto: 'true',
-        merchant_id: req.pos.merchantId,
-        pos_id: req.pos.posId,
-        order_id: orderId,
-        expected_cardholder: expectedName || ''
-      }
-    });
+    const metadata = {
+      moto: 'true',
+      merchant_id: req.pos.merchantId,
+      pos_id: req.pos.posId,
+      order_id: orderId,
+      expected_cardholder: expectedName || ''
+    };
 
-    const paymentLink = await getStripe().paymentLinks.create({
+    const checkoutSession = await getStripe().checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      metadata: {
+        ...metadata,
+        customer_id: customer_id || ''
+      },
+      payment_intent_data: {
+        description: description || 'MOTO Payment',
+        metadata
+      },
       line_items: [{
         price_data: {
-          currency: currency || 'usd',
+          currency: normalizedCurrency,
           product_data: { name: description || 'MOTO Payment' },
           unit_amount: amount
         },
@@ -1436,7 +1443,8 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       }],
       billing_address_collection: 'auto', // optional — not forced for international cards
       phone_number_collection: { enabled: false },
-      metadata: { moto: 'true', merchant_id: req.pos.merchantId, pos_id: req.pos.posId, order_id: orderId }
+      success_url: `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/pos?payment=success&order_id=${orderId}`,
+      cancel_url: `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/pos?payment=cancelled&order_id=${orderId}`
     });
 
     const order = await prisma.order.create({
@@ -1446,9 +1454,9 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
         posId: req.pos.id,
         customerId: customer_id || null,
         amount: amount / 100,
-        currency: (currency || 'usd').toUpperCase(),
+        currency: normalizedCurrency.toUpperCase(),
         description,
-        paymentIntentId: paymentIntent.id,
+        paymentIntentId: null,
         expectedCardholder: expectedName || null
       }
     });
@@ -1457,7 +1465,7 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       data: { posId: req.pos.id, merchantId: req.pos.merchantId, action: 'order_created', details: JSON.stringify({ orderId, amount }) }
     });
 
-    res.json({ order_id: orderId, payment_intent_id: paymentIntent.id, card_entry_url: paymentLink.url });
+    res.json({ order_id: orderId, payment_intent_id: null, card_entry_url: checkoutSession.url });
   } catch (error) {
     console.error('MOTO order error:', error);
     res.status(500).json({ error: error.message });
