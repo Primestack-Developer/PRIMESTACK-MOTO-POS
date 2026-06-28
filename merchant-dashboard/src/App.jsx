@@ -27,7 +27,7 @@ const CSS = `
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:'Cormorant',Georgia,serif;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
   color:${C.text};
   background-color:${C.bg};
   background-image:
@@ -36,7 +36,7 @@ body{
     linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%);
 }
 button,input,textarea,select{font:inherit}
-h1,h2,h3,h4,h5,h6{font-family:'Cormorant SC','Cormorant',serif;letter-spacing:.08em;font-weight:500}
+h1,h2,h3,h4,h5,h6{font-family:inherit;letter-spacing:0;font-weight:600}
 .lift{transition:transform .18s,box-shadow .18s}
 .lift:hover{transform:translateY(-3px);box-shadow:0 18px 38px rgba(0,0,0,.32)!important}
 .lsm{transition:transform .15s}
@@ -434,7 +434,7 @@ export default function App() {
         <div className="lift" style={{background:C.white,borderRadius:'28px',padding:'2.5rem',width:'100%',maxWidth:'420px',boxShadow:'0 30px 90px rgba(0,0,0,0.45)',border:`1px solid ${C.border}`,textAlign:'center'}}>
           <img src="/logo.png" alt="Logo" style={{height:'52px',objectFit:'contain',marginBottom:'1rem'}} onError={e=>e.target.style.display='none'}/>
           <h1 style={{fontSize:'1.8rem',fontWeight:'600',color:C.text,margin:0}}>Merchant Portal</h1>
-          <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 2rem',fontFamily:'DM Mono, monospace',letterSpacing:'0.08em',textTransform:'uppercase'}}>Verifying session...</p>
+          <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 2rem',letterSpacing:'0.04em',textTransform:'uppercase'}}>Verifying session...</p>
           <div style={{fontSize:'3rem',animation:'pulse 1.5s ease-in-out infinite'}}>⏳</div>
         </div>
       </div>
@@ -450,16 +450,16 @@ export default function App() {
           <div style={{textAlign:'center',marginBottom:'2rem'}}>
             <img src="/logo.png" alt="Logo" style={{height:'52px',objectFit:'contain',marginBottom:'1rem'}} onError={e=>e.target.style.display='none'}/>
             <h1 style={{fontSize:'1.8rem',fontWeight:'600',color:C.text,margin:0}}>Merchant Portal</h1>
-            <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 0',fontFamily:'DM Mono, monospace',letterSpacing:'0.08em',textTransform:'uppercase'}}>Sign in to your dashboard</p>
+            <p style={{color:C.textMuted,fontSize:'0.875rem',margin:'0.25rem 0 0',letterSpacing:'0.04em',textTransform:'uppercase'}}>Sign in to your dashboard</p>
           </div>
           {msg && <div style={{padding:'0.75rem',background:msg.t==='e'?C.redLight:C.accentLight,color:msg.t==='e'?C.red:C.accentDark,borderRadius:'10px',marginBottom:'1rem',fontSize:'0.875rem'}}>{msg.text}</div>}
           <form onSubmit={login}>
             <div style={{marginBottom:'1rem'}}>
-              <label style={{display:'block',fontSize:'0.72rem',fontWeight:'500',color:C.textMuted,marginBottom:'0.375rem',fontFamily:'DM Mono, monospace',letterSpacing:'0.1em',textTransform:'uppercase'}}>Email</label>
+              <label style={{display:'block',fontSize:'0.72rem',fontWeight:'600',color:C.textMuted,marginBottom:'0.375rem',letterSpacing:'0.04em',textTransform:'uppercase'}}>Email</label>
               <input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} required style={INP} placeholder="merchant@email.com"/>
             </div>
             <div style={{marginBottom:'1.5rem'}}>
-              <label style={{display:'block',fontSize:'0.72rem',fontWeight:'500',color:C.textMuted,marginBottom:'0.375rem',fontFamily:'DM Mono, monospace',letterSpacing:'0.1em',textTransform:'uppercase'}}>Password</label>
+              <label style={{display:'block',fontSize:'0.72rem',fontWeight:'600',color:C.textMuted,marginBottom:'0.375rem',letterSpacing:'0.04em',textTransform:'uppercase'}}>Password</label>
               <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} required style={INP} placeholder="••••••••"/>
             </div>
             <button type="submit" className="lift" style={{...BP,width:'100%',padding:'0.875rem',fontSize:'1rem'}}>Sign In</button>

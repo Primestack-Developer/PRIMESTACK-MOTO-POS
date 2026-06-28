@@ -6,7 +6,7 @@ const API = import.meta.env.VITE_API_URL || ''
 const G = `
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   body {
-    font-family:'Cormorant',Georgia,serif;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
     background-color:#0f0608;
     background-image:
       repeating-linear-gradient(90deg,transparent 0,transparent 14px,rgba(255,255,255,.014) 14px,rgba(255,255,255,.014) 15px),
@@ -38,7 +38,7 @@ const G = `
   .inp:focus { border-color:#c8a870; box-shadow:0 0 0 3px rgba(200,168,112,.12); }
   .inp-xl { font-size:2.5rem; text-align:center; font-weight:800; }
   .inp-code { font-size:1.75rem; text-align:center; letter-spacing:0.5rem; font-weight:800; }
-  .lbl { display:block; font-size:0.72rem; font-weight:500; color:rgba(232,224,208,.62); margin-bottom:0.375rem; text-transform:uppercase; letter-spacing:0.12em; font-family:'DM Mono',monospace; }
+  .lbl { display:block; font-size:0.72rem; font-weight:600; color:rgba(232,224,208,.62); margin-bottom:0.375rem; text-transform:uppercase; letter-spacing:0.04em; font-family:inherit; }
   .fg { margin-bottom:1rem; }
   .bdg-g { background:rgba(200,168,112,.12); color:#c8a870; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
   .bdg-r { background:#fee2e2; color:#dc2626; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
@@ -482,7 +482,7 @@ export default function App() {
         <div className="card" style={{ textAlign: 'center' }}>
           <Logo />
           <h1 style={{ fontSize: '1.55rem', fontWeight: '600', color: '#e8e0d0', marginBottom: '0.25rem' }}>PrimeStack MOTO POS</h1>
-          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '2rem', fontFamily: 'DM Mono, monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Verifying device...</p>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '2rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Verifying device...</p>
           <div className="pulse" style={{ fontSize: '2rem' }}>⏳</div>
         </div>
       </div>
@@ -496,7 +496,7 @@ export default function App() {
         <div className="card lift" style={{ textAlign: 'center' }}>
           <Logo />
           <h1 style={{ fontSize: '1.55rem', fontWeight: '600', color: '#e8e0d0', marginBottom: '0.25rem' }}>PrimeStack MOTO POS</h1>
-          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '2rem', fontFamily: 'DM Mono, monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Enter your activation code</p>
+          <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '2rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Enter your activation code</p>
           {msg && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.75rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem' }}>{msg}</div>}
           <form onSubmit={doActivate}>
             <div className="fg">
@@ -635,7 +635,7 @@ export default function App() {
           </button>
           {customers.length > 0 && (
             <div>
-              <p style={{ fontSize: '0.72rem', color: 'rgba(232,224,208,0.62)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0.5rem 0', fontFamily: 'DM Mono, monospace' }}>Registered Customers</p>
+              <p style={{ fontSize: '0.72rem', color: 'rgba(232,224,208,0.62)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0.5rem 0' }}>Registered Customers</p>
               <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '0.75rem' }}>
                 {customers.map(c => {
                   const isVerified = c.verification?.status === 'approved';
@@ -746,7 +746,7 @@ export default function App() {
           )}
 
           <div className="info-box" style={{ marginTop: '1rem' }}>
-            <p style={{ fontSize: '0.72rem', color: '#c8a870', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', fontFamily: 'DM Mono, monospace' }}>
+            <p style={{ fontSize: '0.72rem', color: '#c8a870', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
               Stripe Hosted Card Entry
             </p>
             <p style={{ fontSize: '0.85rem', color: 'rgba(232,224,208,0.72)', lineHeight: 1.5, margin: 0 }}>
