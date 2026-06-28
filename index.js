@@ -295,8 +295,36 @@ const createPosDevice = async (merchantId) => {
 };
 
 const generateOrderId = async () => {
-  const count = await prisma.order.count();
-  return `ORD-${String(count + 1).padStart(6, '0')}`;
+  const recentOrders = await prisma.order.findMany({
+    where: { orderId: { startsWith: 'ORD-' } },
+    orderBy: { orderId: 'desc' },
+    select: { orderId: true },
+    take: 50
+  });
+  const lastOrder = recentOrders.find(order => /^ORD-\d+$/.test(order.orderId));
+  const lastNumber = Number.parseInt(lastOrder?.orderId?.replace('ORD-', '') || '0', 10);
+  const nextNumber = Number.isFinite(lastNumber) ? lastNumber + 1 : 1;
+  return `ORD-${String(nextNumber).padStart(6, '0')}`;
+};
+
+const isUniqueConstraintError = (error) =>
+  error?.code === 'P2002' || /Unique constraint failed/i.test(error?.message || '');
+
+const createOrderWithUniqueId = async (data) => {
+  let lastError;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const orderId = await generateOrderId();
+      return await prisma.order.create({ data: { ...data, orderId } });
+    } catch (error) {
+      lastError = error;
+      if (!isUniqueConstraintError(error)) throw error;
+    }
+  }
+
+  const fallbackOrderId = `ORD-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+  return prisma.order.create({ data: { ...data, orderId: fallbackOrderId } });
 };
 
 // ─── Shared Webhook Handler ───────────────────────────────────────────────────
@@ -1391,7 +1419,6 @@ router.get('/pos/orders', authenticatePOS, async (req, res) => {
 router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrder), async (req, res) => {
   try {
     const { amount, currency, description, customer_id, customer_name } = req.body;
-    const orderId = await generateOrderId();
     const normalizedCurrency = (currency || 'usd').toLowerCase();
 
     // Resolve customer name for cardholder matching AND check verification status
@@ -1413,6 +1440,18 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
         }
       }
     }
+
+    const order = await createOrderWithUniqueId({
+      merchantId: req.pos.merchantId,
+      posId: req.pos.id,
+      customerId: customer_id || null,
+      amount: amount / 100,
+      currency: normalizedCurrency.toUpperCase(),
+      description,
+      paymentIntentId: null,
+      expectedCardholder: expectedName || null
+    });
+    const orderId = order.orderId;
 
     const metadata = {
       moto: 'true',
@@ -1445,20 +1484,6 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       phone_number_collection: { enabled: false },
       success_url: `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/pos?payment=success&order_id=${orderId}`,
       cancel_url: `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/pos?payment=cancelled&order_id=${orderId}`
-    });
-
-    const order = await prisma.order.create({
-      data: {
-        orderId,
-        merchantId: req.pos.merchantId,
-        posId: req.pos.id,
-        customerId: customer_id || null,
-        amount: amount / 100,
-        currency: normalizedCurrency.toUpperCase(),
-        description,
-        paymentIntentId: null,
-        expectedCardholder: expectedName || null
-      }
     });
 
     await prisma.deviceLog.create({
