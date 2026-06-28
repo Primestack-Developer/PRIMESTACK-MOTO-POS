@@ -12,6 +12,7 @@ const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 
 const prisma = new PrismaClient();
+const app = express();
 const router = express.Router();
 
 // ─── Validation Helper ────────────────────────────────────────────────────────
@@ -1979,7 +1980,6 @@ router.post('/webhooks/stripe', handleStripeWebhook);
 router.post('/stripe/webhook', handleStripeWebhook);
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
-// Catches any unhandled errors and returns safe messages (no stack traces)
 router.use((err, req, res, next) => {
   console.error('[ERROR]', err.message)
   if (err.message && err.message.startsWith('CORS')) {
@@ -1988,15 +1988,15 @@ router.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' })
 })
 
-// ─── Start Server / Export ───────────────────────────────────────────────────
+// ─── Mount router on app ──────────────────────────────────────────────────────
+app.use(cors());
+app.use(router);
 
-// Export router for server.js
-module.exports = router;
+// ─── Export / Start ───────────────────────────────────────────────────────────
+module.exports = app;
 
-// Start directly only when run as main module (local dev: node index.js)
 if (require.main === module) {
-  const app = express();
-  app.use(router);
+  const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`PrimeStack MOTO POS server running on port ${PORT}`);
   });
