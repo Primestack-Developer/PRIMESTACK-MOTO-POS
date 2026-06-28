@@ -1470,6 +1470,9 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       },
       payment_intent_data: {
         description: description || 'MOTO Payment',
+        payment_method_options: {
+          card: { moto: true }
+        },
         metadata
       },
       line_items: [{
