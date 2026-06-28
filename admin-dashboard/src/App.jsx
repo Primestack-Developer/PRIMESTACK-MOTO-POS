@@ -281,11 +281,19 @@ export default function App() {
     fetchJSON(`${API}/admin/orders`,       H, d => d.orders      && setOrders(d.orders))
     fetchJSON(`${API}/admin/transactions`, H, d => d.transactions && setTransactions(d.transactions))
     fetchJSON(`${API}/admin/webhook-logs`, H, d => d.webhookLogs && setWebhooks(d.webhookLogs))
-    fetchJSON(`${API}/admin/verifications`,H, d => d.verifications && setVerifications(d.verifications))
+    loadVerifications()
     fetchJSON(`${API}/admin/notifications`,H, d => d.notifications && setAdminNotifs(d.notifications))
     fetchJSON(`${API}/system/status`,      {}, d => { if(d.online!==undefined){ setSystemOnline(d.online); setSystemMsg(d.message||'') } })
     fetchJSON(`${API}/admin/disputes`,     H, d => d.disputes   && setDisputes(d.disputes))
     fetchJSON(`${API}/admin/fraud-flags`,  H, d => d.fraudFlags && setFraudFlags(d.fraudFlags))
+  }
+
+  const loadVerifications = async () => {
+    try {
+      const r = await fetch(`${API}/admin/verifications`, { headers: H })
+      const d = await r.json()
+      if (d.verifications) setVerifications(d.verifications)
+    } catch(e) {}
   }
 
   // Poll notifications, transactions, and chat conversations every 2 seconds for real-time updates
@@ -313,6 +321,8 @@ export default function App() {
         if (txD.transactions) {
           setTransactions(txD.transactions)
         }
+
+        await loadVerifications()
 
         // Poll chat conversations
         const chatR = await fetch(`${API}/admin/chats`, { headers: H })
@@ -612,6 +622,7 @@ export default function App() {
     setSelMerchant(null); setSelPos(null); setSelPayment(null); setSelWebhook(null)
     setSelVerif(null); setSelDispute(null); setShowAddMerchant(false); setMsg(null)
     setFilterMerchantId(null)
+    if (t === 'verifications') loadVerifications()
   }
 
   const navToFiltered = (t, merchantId) => {

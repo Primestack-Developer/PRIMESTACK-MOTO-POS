@@ -1943,11 +1943,42 @@ router.post('/merchant/notifications/:id/read', authenticateMerchant, async (req
 // Admin: get all pending verifications
 router.get('/admin/verifications', authenticateAdmin, async (req, res) => {
   try {
-    const verifications = await prisma.customerVerification.findMany({
-      include: { customer: true, merchant: true },
-      orderBy: { createdAt: 'desc' }
-    });
+    const summaryOnly = req.query.summary === 'true';
+    const verifications = summaryOnly
+      ? await prisma.customerVerification.findMany({
+          select: {
+            id: true,
+            customerId: true,
+            merchantId: true,
+            status: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+            reviewedBy: true,
+            reviewedAt: true,
+            customer: { select: { id: true, name: true, email: true, phone: true } },
+            merchant: { select: { id: true, merchantId: true, name: true, businessName: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        })
+      : await prisma.customerVerification.findMany({
+          include: { customer: true, merchant: true },
+          orderBy: { createdAt: 'desc' }
+        });
     res.json({ verifications });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/admin/verifications/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const verification = await prisma.customerVerification.findUnique({
+      where: { id: req.params.id },
+      include: { customer: true, merchant: true }
+    });
+    if (!verification) return res.status(404).json({ error: 'Verification not found' });
+    res.json({ verification });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
