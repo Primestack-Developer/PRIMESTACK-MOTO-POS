@@ -1,4 +1,9 @@
+const fs = require('fs');
+const path = require('path');
 const winston = require('winston');
+
+const logsDir = path.join(process.cwd(), 'logs');
+fs.mkdirSync(logsDir, { recursive: true });
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -8,8 +13,8 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'primestack-pos' },
   transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
+    new winston.transports.File({ filename: path.join(logsDir, 'error.log'), level: 'error' }),
+    new winston.transports.File({ filename: path.join(logsDir, 'combined.log') }),
   ],
 });
 
