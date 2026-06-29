@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -80,7 +80,7 @@ const BackBtn = ({ onClick }) => (
 )
 
 /* ── Main App ───────────────────────────────────────────────────────────────── */
-const APP_VERSION = '1.0.3'; // Increment this to force clear cache
+const APP_VERSION = '1.0.4'; // Increment this to force clear cache
 const PENDING_MOTO_KEY = 'pendingMotoPayment'
 
 export default function App() {
@@ -112,9 +112,23 @@ export default function App() {
   const [linkOpened, setLinkOpened] = useState(false)
   const [pd, setPd] = useState({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
   const [newCust, setNewCust]     = useState({ name: '', email: '', phone: '', billingAddress: '' })
+  const pollingIntervalRef = useRef(null)
+  const pollingTimeoutRef = useRef(null)
 
   const token = creds ? creds.api_token : null;
   const AH = token ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } : {};
+
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current)
+      pollingTimeoutRef.current = null
+    }
+    setPolling(false)
+  }
 
   // Verify stored credentials on app load - CLEAR OLD DATA FIRST if needed!
   useEffect(() => {
@@ -234,6 +248,8 @@ export default function App() {
 
   useEffect(() => { if (creds) loadCustomers() }, [creds])
 
+  useEffect(() => () => stopPolling(), [])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const paymentStatus = params.get('payment')
@@ -266,6 +282,7 @@ export default function App() {
       setView('processing')
       startPolling(orderId)
     } else if (paymentStatus === 'cancelled') {
+      localStorage.removeItem(PENDING_MOTO_KEY)
       setMsg('Payment was cancelled')
       setView('failed')
     }
@@ -322,6 +339,7 @@ export default function App() {
 
   const doLogout = () => {
     // CLEAR ALL LOCAL STORAGE!
+    stopPolling()
     localStorage.clear()
     setCreds(null)
     setView('activation')
@@ -424,36 +442,47 @@ export default function App() {
   }
 
   const startPolling = (orderId) => {
+    stopPolling()
     setPolling(true)
-    const iv = setInterval(async () => {
+    pollingIntervalRef.current = setInterval(async () => {
       try {
         const r = await fetch(API + '/pos/moto/orders/' + orderId, { headers: AH })
         const d = await r.json()
         if (d.status === 'paid') {
-          clearInterval(iv)
+          stopPolling()
           localStorage.removeItem(PENDING_MOTO_KEY)
           playSuccessSound()
           setCurOrder({ orderId: d.order_id, payment: d.card_brand ? { cardBrand: d.card_brand, cardLast4: d.last4 } : null })
           setView('success')
-          setPolling(false)
         } else if (d.status === 'failed') {
-          clearInterval(iv)
+          stopPolling()
           localStorage.removeItem(PENDING_MOTO_KEY)
           playFailureSound()
+          setMsg('Payment failed')
           setView('failed')
-          setPolling(false)
-        } else if (d.status === 'flagged') {
-          clearInterval(iv)
+        } else if (d.status === 'flagged' || d.status === 'refunded' || d.status === 'canceled') {
+          stopPolling()
           localStorage.removeItem(PENDING_MOTO_KEY)
           playFailureSound()
-          setView('flagged')
-          setPolling(false)
+          if (d.status === 'flagged' || d.status === 'refunded') {
+            setView('flagged')
+          } else {
+            setMsg('Payment was cancelled')
+            setView('failed')
+          }
         }
       } catch (e) {}
     }, 2000)
+
+    pollingTimeoutRef.current = setTimeout(() => {
+      stopPolling()
+      setMsg('Payment confirmation timed out. Check Orders to confirm the final result.')
+      setView('failed')
+    }, 180000)
   }
 
   const doReset = () => {
+    stopPolling()
     localStorage.removeItem(PENDING_MOTO_KEY)
     setPd({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
     setCurOrder(null)

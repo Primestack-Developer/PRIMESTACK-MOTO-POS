@@ -1569,21 +1569,27 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
 
     // Resolve customer name for cardholder matching AND check verification status
     let expectedName = customer_name || null;
-    if (customer_id && !expectedName) {
+    if (customer_id) {
       const customer = await prisma.customer.findUnique({ 
         where: { id: customer_id },
         include: { verification: true }
       });
-      if (customer) {
-        expectedName = customer.name;
-        
-        // Check if customer is verified
-        if (customer.verification?.status !== 'approved') {
-          return res.status(400).json({ 
-            error: 'Customer not verified',
-            message: 'This customer must be verified by admin before processing payments.' 
-          });
-        }
+
+      if (!customer || customer.merchantId !== req.pos.merchantId) {
+        return res.status(404).json({
+          error: 'Customer not found',
+          message: 'The selected customer does not belong to this merchant.'
+        });
+      }
+
+      expectedName = customer.name;
+
+      // Check if customer is verified
+      if (customer.verification?.status !== 'approved') {
+        return res.status(400).json({ 
+          error: 'Customer not verified',
+          message: 'This customer must be verified by admin before processing payments.' 
+        });
       }
     }
 
@@ -1700,6 +1706,9 @@ router.get('/pos/moto/orders/:orderId', authenticatePOS, async (req, res) => {
       include: { payment: true }
     });
     if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.posId !== req.pos.id || order.merchantId !== req.pos.merchantId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     res.json({
       order_id: order.orderId,
