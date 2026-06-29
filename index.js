@@ -1499,6 +1499,7 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
     const amount = `${order.currency} ${order.amount.toFixed(2)}`;
     const origin = `${req.protocol}://${req.get('host')}`;
     const returnUrl = `${origin}/?payment=return&order_id=${encodeURIComponent(orderId)}`;
+    const defaultCardholderName = order.customer?.name || order.expectedCardholder || '';
 
     res.type('html').send(`<!doctype html>
 <html lang="en">
@@ -1511,7 +1512,7 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#0f0608;color:#f6efe1;display:flex;align-items:center;justify-content:center;padding:24px}
     .wrap{width:100%;max-width:460px;background:#111318;border:1px solid rgba(232,224,208,.12);border-radius:18px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.42)}
     h1{font-size:22px;margin:0 0 6px}.muted{color:rgba(232,224,208,.66);font-size:14px;margin:0 0 18px;line-height:1.5}.box{background:rgba(255,255,255,.04);border:1px solid rgba(232,224,208,.10);border-radius:12px;padding:14px;margin-bottom:18px}
-    .row{display:flex;justify-content:space-between;gap:14px;font-size:14px;margin:5px 0}.label{color:rgba(232,224,208,.62)}#payment-element{padding:14px;background:#fff;border-radius:12px;margin-bottom:16px}
+    .row{display:flex;justify-content:space-between;gap:14px;font-size:14px;margin:5px 0}.label{color:rgba(232,224,208,.62)}label{display:block;margin:0 0 10px;color:rgba(232,224,208,.72);font-size:13px;font-weight:700}input{width:100%;padding:12px 14px;border:1px solid rgba(232,224,208,.12);border-radius:12px;background:#1a1d24;color:#f6efe1;font-size:15px;margin-bottom:14px}#payment-element{padding:14px;background:#fff;border-radius:12px;margin-bottom:16px}
     button{width:100%;min-height:48px;border:0;border-radius:12px;background:linear-gradient(135deg,#c8a870,#9f7c42);color:#111318;font-weight:800;font-size:16px;cursor:pointer}
     button:disabled{opacity:.55;cursor:not-allowed}.msg{font-size:14px;margin-top:14px;color:#fca5a5;min-height:20px}.safe{font-size:12px;color:rgba(232,224,208,.55);text-align:center;margin-top:16px}
   </style>
@@ -1527,6 +1528,8 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
       <div class="row"><span class="label">Customer</span><strong>${escapeHtml(order.customer?.name || order.expectedCardholder || 'Walk-in')}</strong></div>
     </div>
     <form id="payment-form">
+      <label for="cardholder-name">Cardholder Name</label>
+      <input id="cardholder-name" type="text" autocomplete="cc-name" value="${escapeHtml(defaultCardholderName)}" placeholder="Cardholder name" />
       <div id="payment-element"></div>
       <button id="submit">Pay ${escapeHtml(amount)}</button>
       <div id="message" class="msg"></div>
@@ -1540,18 +1543,52 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
     const form = document.getElementById('payment-form');
     const submit = document.getElementById('submit');
     const message = document.getElementById('message');
+    const cardholderName = document.getElementById('cardholder-name');
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       submit.disabled = true;
       message.textContent = '';
-      const result = await stripe.confirmPayment({
-        elements,
-        confirmParams: { return_url: ${JSON.stringify(returnUrl)} }
-      });
-      if (result.error) {
-        message.textContent = result.error.message || 'Payment failed. Please try another card.';
+
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        message.textContent = submitError.message || 'Please check the card details and try again.';
         submit.disabled = false;
+        return;
       }
+
+      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        elements,
+        params: {
+          billing_details: {
+            name: (cardholderName.value || '').trim() || ${JSON.stringify(defaultCardholderName)}
+          }
+        }
+      });
+
+      if (paymentMethodError || !paymentMethod) {
+        message.textContent = paymentMethodError?.message || 'Unable to securely collect card details.';
+        submit.disabled = false;
+        return;
+      }
+
+      const response = await fetch('/moto-card-entry/${encodeURIComponent(orderId)}/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_secret: ${JSON.stringify(clientSecret)},
+          payment_method_id: paymentMethod.id,
+          cardholder_name: (cardholderName.value || '').trim() || ${JSON.stringify(defaultCardholderName)}
+        })
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        message.textContent = result.error || 'Payment failed. Please try another card.';
+        submit.disabled = false;
+        return;
+      }
+
+      window.location.href = result.return_url || ${JSON.stringify(returnUrl)};
     });
   </script>
 </body>
@@ -1559,6 +1596,73 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
   } catch (error) {
     console.error('MOTO card entry page error:', error);
     res.status(500).send('Unable to open payment page.');
+  }
+});
+
+router.post('/moto-card-entry/:orderId/confirm', express.json(), async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { client_secret: clientSecret, payment_method_id: paymentMethodId, cardholder_name: cardholderName } = req.body || {};
+
+    if (!clientSecret || !paymentMethodId) {
+      return res.status(400).json({ error: 'Missing payment session details.' });
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { orderId }
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+
+    const paymentIntentId = String(clientSecret).split('_secret_')[0];
+    if (!paymentIntentId || paymentIntentId !== order.paymentIntentId) {
+      return res.status(400).json({ error: 'Payment session mismatch.' });
+    }
+
+    const confirmedIntent = await getStripe().paymentIntents.confirm(order.paymentIntentId, {
+      payment_method: paymentMethodId,
+      payment_method_options: {
+        card: {
+          moto: true
+        }
+      },
+      metadata: {
+        order_id: order.orderId,
+        cardholderName: String(cardholderName || '').trim(),
+        expected_cardholder: order.expectedCardholder || ''
+      }
+    });
+
+    if (['succeeded', 'processing', 'requires_payment_method', 'canceled'].includes(confirmedIntent.status)) {
+      await PaymentService.handlePaymentIntent(confirmedIntent);
+    }
+
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const returnUrl = `${origin}/?payment=return&order_id=${encodeURIComponent(orderId)}`;
+
+    if (confirmedIntent.status === 'succeeded' || confirmedIntent.status === 'processing') {
+      return res.json({ return_url: returnUrl, status: confirmedIntent.status });
+    }
+
+    if (confirmedIntent.status === 'requires_action') {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'failed' }
+      });
+      return res.status(402).json({
+        error: 'This card requires customer authentication and cannot be used for MOTO payments.'
+      });
+    }
+
+    return res.status(402).json({
+      error: confirmedIntent.last_payment_error?.message || 'Card was declined. Please verify the details or try another card.',
+      status: confirmedIntent.status
+    });
+  } catch (error) {
+    console.error('MOTO confirm error:', error);
+    return res.status(500).json({ error: error.message || 'Unable to process payment.' });
   }
 });
 
