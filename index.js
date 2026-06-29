@@ -10,6 +10,7 @@ const Stripe = require('stripe');
 const { z } = require('zod');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const PaymentService = require('./src/services/paymentService');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -91,6 +92,18 @@ const schemas = {
     description: z.string().max(500).optional(),
     customer_id: z.string().optional().nullable(),
     customer_name: z.string().max(200).optional().nullable()
+  }),
+  processMotoPayment: z.object({
+    cardNumber: z.string().min(12, 'Card number is required').max(25, 'Card number is invalid'),
+    cardExpiry: z.string().regex(/^\d{2}\/\d{2,4}$/, 'Expiry must be in MM/YY format'),
+    cardCvc: z.string().min(3, 'CVC is required').max(4, 'CVC is invalid'),
+    cardholderName: z.string().min(2, 'Cardholder name is required').max(200),
+    amount: z.number({ invalid_type_error: 'Amount must be a number' })
+      .positive('Amount must be positive')
+      .max(10000, 'Maximum transaction amount is $10,000.00'),
+    currency: z.string().length(3, 'Currency must be a 3-letter code').optional().default('USD'),
+    customerId: z.string().optional().nullable(),
+    description: z.string().max(500).optional().nullable()
   }),
   createTransaction: z.object({
     amount: z.number({ invalid_type_error: 'Amount must be a number' }).positive(),
@@ -326,6 +339,13 @@ const createOrderWithUniqueId = async (data) => {
   const fallbackOrderId = `ORD-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
   return prisma.order.create({ data: { ...data, orderId: fallbackOrderId } });
 };
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 // ─── Shared Webhook Handler ───────────────────────────────────────────────────
 
@@ -1461,6 +1481,86 @@ router.get('/pos/orders', authenticatePOS, async (req, res) => {
   }
 });
 
+router.get('/moto-card-entry/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { client_secret: clientSecret } = req.query;
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+
+    if (!publishableKey) return res.status(500).send('Stripe publishable key is not configured.');
+    if (!clientSecret) return res.status(400).send('Missing payment client secret.');
+
+    const order = await prisma.order.findUnique({
+      where: { orderId },
+      include: { merchant: true, customer: true }
+    });
+    if (!order) return res.status(404).send('Order not found.');
+
+    const amount = `${order.currency} ${order.amount.toFixed(2)}`;
+    const returnUrl = `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/?payment=return&order_id=${encodeURIComponent(orderId)}`;
+
+    res.type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MOTO Card Entry - ${escapeHtml(orderId)}</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#0f0608;color:#f6efe1;display:flex;align-items:center;justify-content:center;padding:24px}
+    .wrap{width:100%;max-width:460px;background:#111318;border:1px solid rgba(232,224,208,.12);border-radius:18px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.42)}
+    h1{font-size:22px;margin:0 0 6px}.muted{color:rgba(232,224,208,.66);font-size:14px;margin:0 0 18px;line-height:1.5}.box{background:rgba(255,255,255,.04);border:1px solid rgba(232,224,208,.10);border-radius:12px;padding:14px;margin-bottom:18px}
+    .row{display:flex;justify-content:space-between;gap:14px;font-size:14px;margin:5px 0}.label{color:rgba(232,224,208,.62)}#payment-element{padding:14px;background:#fff;border-radius:12px;margin-bottom:16px}
+    button{width:100%;min-height:48px;border:0;border-radius:12px;background:linear-gradient(135deg,#c8a870,#9f7c42);color:#111318;font-weight:800;font-size:16px;cursor:pointer}
+    button:disabled{opacity:.55;cursor:not-allowed}.msg{font-size:14px;margin-top:14px;color:#fca5a5;min-height:20px}.safe{font-size:12px;color:rgba(232,224,208,.55);text-align:center;margin-top:16px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>MOTO Card Entry</h1>
+    <p class="muted">Enter card details securely. This payment is created as a Mail Order / Telephone Order transaction.</p>
+    <div class="box">
+      <div class="row"><span class="label">Merchant</span><strong>${escapeHtml(order.merchant?.businessName || order.merchant?.name || 'Merchant')}</strong></div>
+      <div class="row"><span class="label">Order</span><strong>${escapeHtml(orderId)}</strong></div>
+      <div class="row"><span class="label">Amount</span><strong>${escapeHtml(amount)}</strong></div>
+      <div class="row"><span class="label">Customer</span><strong>${escapeHtml(order.customer?.name || order.expectedCardholder || 'Walk-in')}</strong></div>
+    </div>
+    <form id="payment-form">
+      <div id="payment-element"></div>
+      <button id="submit">Pay ${escapeHtml(amount)}</button>
+      <div id="message" class="msg"></div>
+    </form>
+    <p class="safe">Card details are handled by Stripe and are not stored on this POS system.</p>
+  </main>
+  <script>
+    const stripe = Stripe(${JSON.stringify(publishableKey)});
+    const elements = stripe.elements({ clientSecret: ${JSON.stringify(clientSecret)} });
+    elements.create('payment').mount('#payment-element');
+    const form = document.getElementById('payment-form');
+    const submit = document.getElementById('submit');
+    const message = document.getElementById('message');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      submit.disabled = true;
+      message.textContent = '';
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: ${JSON.stringify(returnUrl)} }
+      });
+      if (result.error) {
+        message.textContent = result.error.message || 'Payment failed. Please try another card.';
+        submit.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>`);
+  } catch (error) {
+    console.error('MOTO card entry page error:', error);
+    res.status(500).send('Unable to open payment page.');
+  }
+});
+
 router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrder), async (req, res) => {
   try {
     const { amount, currency, description, customer_id, customer_name } = req.body;
@@ -1506,7 +1606,7 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       expected_cardholder: expectedName || ''
     };
 
-    const checkoutSession = await getStripe().checkout.sessions.create({
+    const paymentIntent = await getStripe().paymentIntents.create({
       mode: 'payment',
       payment_method_types: ['card'],
       metadata: {
@@ -1539,6 +1639,61 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
   } catch (error) {
     console.error('MOTO order error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/pos/moto-payment', authenticatePOS, validate(schemas.processMotoPayment), async (req, res) => {
+  try {
+    const {
+      cardNumber,
+      cardExpiry,
+      cardCvc,
+      cardholderName,
+      amount,
+      currency,
+      customerId,
+      description
+    } = req.body;
+
+    if (customerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        include: { verification: true }
+      });
+
+      if (!customer || customer.merchantId !== req.pos.merchantId) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      if (customer.verification?.status !== 'approved') {
+        return res.status(400).json({
+          error: 'Customer not verified',
+          message: 'This customer must be verified by admin before processing payments.'
+        });
+      }
+    }
+
+    const result = await PaymentService.processMotoPayment(
+      req.pos.merchantId,
+      req.pos.id,
+      cardNumber,
+      cardExpiry,
+      cardCvc,
+      cardholderName,
+      amount,
+      currency,
+      customerId || null,
+      description || 'MOTO Payment'
+    );
+
+    res.json({
+      success: result.status === 'succeeded' || result.status === 'processing',
+      ...result
+    });
+  } catch (error) {
+    console.error('Direct MOTO payment error:', error);
+    const isCardError = typeof error?.type === 'string' && error.type.toLowerCase().includes('card');
+    res.status(isCardError ? 402 : 500).json({ error: error.message || 'Failed to process MOTO payment' });
   }
 });
 

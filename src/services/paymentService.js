@@ -62,18 +62,23 @@ class PaymentService {
 
   static async processMotoPayment(merchantId, posId, cardNumber, cardExpiry, cardCvc, cardholderName, amount, currency, customerId, description) {
     try {
-      const [expMonth, expYear] = cardExpiry.split('/');
+      const normalizedCardNumber = String(cardNumber || '').replace(/\D/g, '');
+      const normalizedCardCvc = String(cardCvc || '').replace(/\D/g, '');
+      const [rawExpMonth, rawExpYear] = String(cardExpiry || '').split('/');
+      const expMonth = parseInt(String(rawExpMonth || '').trim(), 10);
+      const parsedYear = parseInt(String(rawExpYear || '').trim(), 10);
+      const expYear = String(rawExpYear || '').trim().length === 2 ? 2000 + parsedYear : parsedYear;
 
       const paymentMethod = await stripe.paymentMethods.create({
         type: 'card',
         card: {
-          number: cardNumber,
-          exp_month: parseInt(expMonth),
-          exp_year: parseInt(expYear),
-          cvc: cardCvc
+          number: normalizedCardNumber,
+          exp_month: expMonth,
+          exp_year: expYear,
+          cvc: normalizedCardCvc
         },
         billing_details: {
-          name: cardholderName
+          name: String(cardholderName || '').trim()
         }
       });
 
@@ -109,7 +114,7 @@ class PaymentService {
         payment_method_types: ['card'],
         payment_method_options: {
           card: {
-            moto: 'yes'
+            moto: true
           }
         },
         metadata: {
