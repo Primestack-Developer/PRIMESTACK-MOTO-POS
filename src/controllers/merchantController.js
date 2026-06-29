@@ -118,6 +118,8 @@ async function getCustomers(req, res) {
 
 async function createCustomer(req, res) {
   const merchantId = req.user.id;
+  const { documents = [], notes = '' } = req.body;
+
   const customer = await prisma.customer.create({
     data: {
       merchantId,
@@ -127,7 +129,29 @@ async function createCustomer(req, res) {
       billingAddress: req.body.billingAddress
     }
   });
-  res.json({ customer });
+
+  let verification = null;
+  if (Array.isArray(documents) && documents.length > 0) {
+    verification = await prisma.customerVerification.create({
+      data: {
+        customerId: customer.id,
+        merchantId,
+        documentUrls: JSON.stringify(documents),
+        notes
+      }
+    });
+
+    await prisma.adminNotification.create({
+      data: {
+        type: 'verification_submitted',
+        title: 'New Customer Verification Request',
+        message: `${req.user.email} submitted a verification request for customer ${customer.name}`,
+        data: JSON.stringify({ verificationId: verification.id, customerId: customer.id })
+      }
+    });
+  }
+
+  res.json({ customer, verification });
 }
 
 async function getOrders(req, res) {
@@ -248,8 +272,16 @@ async function submitVerificationRequest(req, res) {
   const merchantId = req.user.id;
   const { id } = req.params;
   const { documents, notes } = req.body;
-  const request = await prisma.customerVerification.create({
-    data: {
+  const request = await prisma.customerVerification.upsert({
+    where: { customerId: id },
+    update: {
+      status: 'pending',
+      documentUrls: JSON.stringify(documents),
+      notes,
+      reviewedBy: null,
+      reviewedAt: null
+    },
+    create: {
       customerId: id,
       merchantId,
       documentUrls: JSON.stringify(documents),

@@ -99,7 +99,7 @@ export default function App() {
   const [transactions, setTransactions] = useState([])
   const [showAddCust, setShowAddCust] = useState(false)
   const [newPosData,  setNewPosData]  = useState(null)
-  const [newCust,     setNewCust]     = useState({name:'',email:'',phone:'',billingAddress:''})
+  const [newCust,     setNewCust]     = useState({name:'',email:'',phone:'',billingAddress:'',documents:[],notes:''})
   const [selOrder,    setSelOrder]    = useState(null)
   const [pwForm,      setPwForm]      = useState({cur:'',nw:'',cf:''})
   const [profile,     setProfile]     = useState({businessName:'',email:'',phone:'',address:'',country:''})
@@ -112,10 +112,6 @@ export default function App() {
   const [showNotif,   setShowNotif]   = useState(false)
   const [systemOnline, setSystemOnline] = useState(true)
   const [systemMessage, setSystemMessage] = useState('')
-  const [verifyCustomer, setVerifyCustomer] = useState(null) // customer being submitted for verification
-  const [verifyDocs,  setVerifyDocs]  = useState([])        // uploaded documents
-  const [verifyNotes, setVerifyNotes] = useState('')
-  const [verifyLoading, setVerifyLoading] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
   // Notification sound
@@ -341,11 +337,15 @@ export default function App() {
 
   const addCust = async e => {
     e.preventDefault()
+    if (newCust.documents.length === 0) {
+      setMsg({t:'e',text:'Please upload customer documents'})
+      return
+    }
     try {
       const d = await post(`${API}/merchant/customers`, newCust)
       if (d.customer) {
-        setNewCust({name:'',email:'',phone:'',billingAddress:''}); setShowAddCust(false)
-        setMsg({t:'s',text:'Customer added!'}); setTimeout(()=>setMsg(null),3000)
+        setNewCust({name:'',email:'',phone:'',billingAddress:'',documents:[],notes:''}); setShowAddCust(false)
+        setMsg({t:'s',text:'Customer added and verification submitted!'}); setTimeout(()=>setMsg(null),4000)
         get(`${API}/merchant/customers`,d=>d.customers&&setCustomers(d.customers))
       } else setMsg({t:'e',text:d.error||'Failed'})
     } catch(e){}
@@ -356,29 +356,10 @@ export default function App() {
     files.forEach(file => {
       const reader = new FileReader()
       reader.onload = (ev) => {
-        setVerifyDocs(prev => [...prev, { name: file.name, type: file.type, base64: ev.target.result }])
+        setNewCust(prev => ({ ...prev, documents: [...prev.documents, { name: file.name, type: file.type, base64: ev.target.result }] }))
       }
       reader.readAsDataURL(file)
     })
-  }
-
-  const submitVerification = async () => {
-    if (!verifyCustomer) return
-    if (verifyDocs.length === 0) { setMsg({t:'e', text:'Please upload at least one document'}); return }
-    setVerifyLoading(true)
-    try {
-      const r = await fetch(`${API}/merchant/customers/${verifyCustomer.id}/verify`, {
-        method:'POST', headers:H, body: JSON.stringify({ documents: verifyDocs, notes: verifyNotes })
-      })
-      const d = await r.json()
-      if (d.verificationId) {
-        setVerifyCustomer(null); setVerifyDocs([]); setVerifyNotes('')
-        setMsg({t:'s', text:'Verification submitted. Your POS devices are paused pending admin review.'})
-        setTimeout(()=>setMsg(null),7000)
-        load()
-      } else { setMsg({t:'e', text:d.error||'Failed to submit'}) }
-    } catch(e){ setMsg({t:'e', text:'Error submitting'}) }
-    setVerifyLoading(false)
   }
 
   const markNotifRead = async (id) => {
@@ -480,12 +461,12 @@ export default function App() {
       <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'radial-gradient(circle at top, rgba(200,168,112,0.12), transparent 30%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)',padding:'2rem'}}>
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:'28px',padding:'2.5rem',width:'100%',maxWidth:'420px',textAlign:'center',boxShadow:'0 30px 90px rgba(0,0,0,0.45)'}}>
           <div style={{fontSize:'4rem',marginBottom:'1rem'}}>🔴</div>
-          <h1 style={{fontSize:'1.7rem',fontWeight:'600',color:C.text,marginBottom:'0.5rem'}}>System Unavailable</h1>
+          <h1 style={{fontSize:'1.7rem',fontWeight:'600',color:C.text,marginBottom:'0.5rem'}}>The Admin Currently Offline</h1>
           <p style={{color:'#6b7280',fontSize:'0.95rem',marginBottom:'1.5rem',lineHeight:1.6}}>
-            {systemMessage || 'The system is currently offline for maintenance. Please try again later.'}
+            {systemMessage || 'The Admin Currently Offline'}
           </p>
           <div style={{background:'#fef3c7',border:'1px solid #fde68a',borderRadius:'12px',padding:'1rem',marginBottom:'1.5rem'}}>
-            <p style={{fontSize:'0.8rem',color:'#92400e',fontWeight:'600',margin:0}}>Your account and data are safe. The system will be back online shortly.</p>
+            <p style={{fontSize:'0.8rem',color:'#92400e',fontWeight:'600',margin:0}}>If You have any Urgent Transactions Contact on WhatsApp: +971569138434</p>
           </div>
           <button onClick={()=>load()} style={{width:'100%',padding:'0.875rem',background:`linear-gradient(135deg,${C.accent},#9f7c42)`,color:'#111318',border:'none',borderRadius:'12px',fontSize:'1rem',fontWeight:'700',cursor:'pointer'}}>
             Try Again
@@ -664,7 +645,7 @@ export default function App() {
 
           <div style={{height:'38px',background:'#000',color:'#fff',display:'flex',alignItems:'center',overflow:'hidden',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
             <div className="marquee-track" style={{fontSize:'0.85rem',fontWeight:'700',letterSpacing:'0.02em'}}>
-              Your portal is up to date. Real MOTO Payments. Zero 3DS. Zero 2D Secure. For technical issues, reach us below the chatbox. Built for Verified Merchants, Enterprise-Grade MOTO POS for High-Trust Merchants — Fast, Secure, Frictionless.
+              If You have any Urgent Transactions Contact on WhatsApp: +971569138434
             </div>
           </div>
 
@@ -795,77 +776,46 @@ export default function App() {
                           <Fld l="Phone"><input type="text" value={newCust.phone} onChange={e=>setNewCust({...newCust,phone:e.target.value})} style={INP} placeholder="+1 555 0000"/></Fld>
                           <Fld l="Billing Address"><input type="text" value={newCust.billingAddress} onChange={e=>setNewCust({...newCust,billingAddress:e.target.value})} style={INP} placeholder="123 Main St"/></Fld>
                         </div>
-                        <button type="submit" className="lsm" style={{...BP,marginTop:'0.5rem'}}>Save Customer</button>
+                        <div style={{margin:'1rem 0 0.75rem'}}>
+                          <label style={{display:'block',fontSize:'0.8rem',fontWeight:'700',color:C.text,marginBottom:'0.375rem',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                            Upload Documents *
+                          </label>
+                          <div style={{border:`2px dashed ${C.border}`,borderRadius:'12px',padding:'1.5rem',textAlign:'center',background:C.bg,cursor:'pointer'}}
+                            onClick={()=>document.getElementById('customer-doc-upload').click()}>
+                            <p style={{fontSize:'1.5rem',margin:'0 0 0.5rem'}}>📄</p>
+                            <p style={{fontSize:'0.875rem',fontWeight:'600',color:C.text,margin:'0 0 0.25rem'}}>Click to upload documents</p>
+                            <p style={{fontSize:'0.75rem',color:C.textMuted,margin:0}}>PDF, JPG, PNG - ID, passport, utility bill etc.</p>
+                            <input id="customer-doc-upload" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={handleDocUpload} style={{display:'none'}}/>
+                          </div>
+                          {newCust.documents.length>0&&(
+                            <div style={{marginTop:'0.75rem',display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+                              {newCust.documents.map((d,i)=>(
+                                <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:C.accentLight,padding:'0.5rem 0.75rem',borderRadius:'8px'}}>
+                                  <span style={{fontSize:'0.8rem',fontWeight:'600',color:C.text}}>📎 {d.name}</span>
+                                  <button type="button" onClick={()=>setNewCust(prev=>({...prev,documents:prev.documents.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:C.red,fontSize:'1rem'}}>✕</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <Fld l="Notes (Optional)">
+                          <textarea value={newCust.notes} onChange={e=>setNewCust({...newCust,notes:e.target.value})} rows={3}
+                            style={{...INP,resize:'vertical',fontFamily:'inherit'}} placeholder="Additional verification notes for admin review..."/>
+                        </Fld>
+                        <button type="submit" className="lsm" style={{...BP,marginTop:'0.5rem'}}>Save Customer And Submit Documents</button>
                       </form>
                     </Card>
                   </div>
                 )}
 
-                {/* Verification submission modal */}
-                {verifyCustomer&&(
-                  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:'1rem'}}>
-                    <div style={{background:C.white,borderRadius:'16px',padding:'2rem',width:'100%',maxWidth:'520px',boxShadow:'0 20px 60px rgba(0,0,0,0.3)',maxHeight:'90vh',overflowY:'auto'}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
-                        <h2 style={{fontSize:'1rem',fontWeight:'800',color:C.text,margin:0}}>Submit Customer for Verification</h2>
-                        <button onClick={()=>{setVerifyCustomer(null);setVerifyDocs([]);setVerifyNotes('')}} style={{background:'none',border:'none',cursor:'pointer',color:C.textMuted,fontSize:'1.2rem'}}>✕</button>
-                      </div>
-
-                      <div style={{background:C.accentLight,borderRadius:'10px',padding:'0.875rem',marginBottom:'1.25rem',border:`1px solid ${C.accentMid}`}}>
-                        <p style={{fontSize:'0.8rem',fontWeight:'700',color:C.accentDark,margin:'0 0 0.25rem'}}>Customer: {verifyCustomer.name}</p>
-                        <p style={{fontSize:'0.75rem',color:C.accentDark,margin:0}}>Submitting this will pause ALL your POS devices until admin approves.</p>
-                      </div>
-
-                      <div style={{marginBottom:'1.25rem'}}>
-                        <label style={{display:'block',fontSize:'0.8rem',fontWeight:'700',color:C.text,marginBottom:'0.375rem',textTransform:'uppercase',letterSpacing:'0.05em'}}>
-                          Upload Documents *
-                        </label>
-                        <div style={{border:`2px dashed ${C.border}`,borderRadius:'12px',padding:'1.5rem',textAlign:'center',background:C.bg,cursor:'pointer'}}
-                          onClick={()=>document.getElementById('doc-upload').click()}>
-                          <p style={{fontSize:'1.5rem',margin:'0 0 0.5rem'}}>📄</p>
-                          <p style={{fontSize:'0.875rem',fontWeight:'600',color:C.text,margin:'0 0 0.25rem'}}>Click to upload documents</p>
-                          <p style={{fontSize:'0.75rem',color:C.textMuted,margin:0}}>PDF, JPG, PNG — ID, passport, utility bill etc.</p>
-                          <input id="doc-upload" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={handleDocUpload} style={{display:'none'}}/>
-                        </div>
-                        {verifyDocs.length>0&&(
-                          <div style={{marginTop:'0.75rem',display:'flex',flexDirection:'column',gap:'0.375rem'}}>
-                            {verifyDocs.map((d,i)=>(
-                              <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:C.accentLight,padding:'0.5rem 0.75rem',borderRadius:'8px'}}>
-                                <span style={{fontSize:'0.8rem',fontWeight:'600',color:C.text}}>📎 {d.name}</span>
-                                <button onClick={()=>setVerifyDocs(prev=>prev.filter((_,j)=>j!==i))} style={{background:'none',border:'none',cursor:'pointer',color:C.red,fontSize:'1rem'}}>✕</button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{marginBottom:'1.5rem'}}>
-                        <label style={{display:'block',fontSize:'0.8rem',fontWeight:'700',color:C.text,marginBottom:'0.375rem',textTransform:'uppercase',letterSpacing:'0.05em'}}>Notes (optional)</label>
-                        <textarea value={verifyNotes} onChange={e=>setVerifyNotes(e.target.value)} rows={3}
-                          style={{...INP,resize:'vertical',fontFamily:'inherit'}} placeholder="Any additional information for admin review..."/>
-                      </div>
-
-                      <div style={{display:'flex',gap:'0.75rem'}}>
-                        <button onClick={()=>{setVerifyCustomer(null);setVerifyDocs([]);setVerifyNotes('')}} style={BS}>Cancel</button>
-                        <button onClick={submitVerification} disabled={verifyLoading||verifyDocs.length===0}
-                          style={{...BP,flex:1,opacity:(verifyLoading||verifyDocs.length===0)?0.6:1}}>
-                          {verifyLoading?'Submitting...':'Submit for Verification'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <Card>
-                  <Tbl heads={['Name','Email','Phone','Address','Action']}
+                  <Tbl heads={['Name','Email','Phone','Address','Verification']}
                     rows={customers.map(c=>[
                       <B>{c.name}</B>,
                       c.email||'—',
                       c.phone||'—',
                       c.billingAddress||'—',
-                      <button onClick={()=>setVerifyCustomer(c)} className="lsm"
-                        style={{padding:'0.3rem 0.75rem',background:C.accentLight,color:C.accentDark,border:`1px solid ${C.accentMid}`,borderRadius:'8px',fontSize:'0.75rem',fontWeight:'700',cursor:'pointer'}}>
-                        Verify
-                      </button>
+                      <Bdg s={c.verification?.status || 'not_submitted'}/>
                     ])}
                     empty="No customers yet"/>
                 </Card>
@@ -1142,7 +1092,7 @@ export default function App() {
 }
 
 // COMPONENTS
-function Bdg({s}){const m={active:{bg:'#dcfce7',c:'#15803d'},paid:{bg:'#dcfce7',c:'#15803d'},suspended:{bg:'#fee2e2',c:'#dc2626'},failed:{bg:'#fee2e2',c:'#dc2626'},disabled:{bg:'#fee2e2',c:'#dc2626'},pending:{bg:'#fef3c7',c:'#b45309'}};const x=m[s]||{bg:'#f3f4f6',c:'#6b7280'};return <span style={{background:x.bg,color:x.c,padding:'0.2rem 0.65rem',borderRadius:'20px',fontSize:'0.75rem',fontWeight:'700',display:'inline-block'}}>{cap(s)}</span>}
+function Bdg({s}){const m={active:{bg:'#dcfce7',c:'#15803d'},paid:{bg:'#dcfce7',c:'#15803d'},approved:{bg:'#dcfce7',c:'#15803d'},suspended:{bg:'#fee2e2',c:'#dc2626'},failed:{bg:'#fee2e2',c:'#dc2626'},disabled:{bg:'#fee2e2',c:'#dc2626'},rejected:{bg:'#fee2e2',c:'#dc2626'},pending:{bg:'#fef3c7',c:'#b45309'},not_submitted:{bg:'#f3f4f6',c:'#6b7280'}};const x=m[s]||{bg:'#f3f4f6',c:'#6b7280'};return <span style={{background:x.bg,color:x.c,padding:'0.2rem 0.65rem',borderRadius:'20px',fontSize:'0.75rem',fontWeight:'700',display:'inline-block'}}>{cap(s).replace('_',' ')}</span>}
 function B({children,accent}){return <span style={{fontWeight:'700',color:accent?'#16a34a':'#111827'}}>{children}</span>}
 function Sm({children}){return <span style={{fontSize:'0.8rem',color:'#6b7280'}}>{children}</span>}
 function Lnk({onClick,children}){return <button onClick={onClick} style={{fontSize:'0.8rem',color:'#16a34a',background:'none',border:'none',cursor:'pointer',fontWeight:'600'}}>{children}</button>}
