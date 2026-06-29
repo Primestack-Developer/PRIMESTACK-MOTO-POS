@@ -1,30 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const winston = require('winston');
-
-const logsDir = path.join(process.cwd(), 'logs');
-fs.mkdirSync(logsDir, { recursive: true });
-
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'primestack-pos' },
-  transports: [
-    new winston.transports.File({ filename: path.join(logsDir, 'error.log'), level: 'error' }),
-    new winston.transports.File({ filename: path.join(logsDir, 'combined.log') }),
-  ],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    ),
-  }));
-}
+// Simple logger that replaces winston — no external dependency needed
+const logger = {
+  info: (msg, data) => console.log(`[INFO] ${msg}`, data ? JSON.stringify(data) : ''),
+  warn: (msg, data) => console.warn(`[WARN] ${msg}`, data ? JSON.stringify(data) : ''),
+  error: (msg, data) => console.error(`[ERROR] ${msg}`, data ? JSON.stringify(data) : ''),
+  debug: (msg, data) => { if (process.env.NODE_ENV !== 'production') console.log(`[DEBUG] ${msg}`, data ? JSON.stringify(data) : '') }
+};
 
 module.exports = logger;
