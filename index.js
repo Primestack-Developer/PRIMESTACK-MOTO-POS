@@ -1698,9 +1698,6 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
   try {
     const { amount, currency, description, customer_id, customer_name } = req.body;
     const normalizedCurrency = (currency || 'usd').toLowerCase();
-    // #region debug-point D:moto-order-entry
-    (()=>{const fs=require('fs'),p='.dbg/payment-flow-stuck.env';let u='http://127.0.0.1:7777/event',s='payment-flow-stuck';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'D',location:'index.js:/pos/moto/orders:entry',msg:'[DEBUG] Backend received POS moto order request',data:{posId:req.pos?.posId||null,merchantId:req.pos?.merchantId||null,amount,currency:normalizedCurrency,customerId:customer_id||null,customerName:customer_name||null},ts:Date.now()})}).catch(()=>{})})();
-    // #endregion
 
     // Resolve customer name for cardholder matching AND check verification status
     let expectedName = customer_name || null;
@@ -1721,9 +1718,6 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
 
       // Check if customer is verified
       if (customer.verification?.status !== 'approved') {
-        // #region debug-point D:moto-order-customer-not-approved
-        (()=>{const fs=require('fs'),p='.dbg/payment-flow-stuck.env';let u='http://127.0.0.1:7777/event',s='payment-flow-stuck';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'D',location:'index.js:/pos/moto/orders:customer-not-approved',msg:'[DEBUG] Backend rejected POS moto order because customer is not approved',data:{customerId:customer.id,verificationStatus:customer.verification?.status||null},ts:Date.now()})}).catch(()=>{})})();
-        // #endregion
         return res.status(400).json({ 
           error: 'Customer not verified',
           message: 'This customer must be verified by admin before processing payments.' 
@@ -1774,14 +1768,8 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
     const origin = `${req.protocol}://${req.get('host')}`;
     const cardEntryUrl = `${origin}/moto-card-entry/${encodeURIComponent(orderId)}?client_secret=${encodeURIComponent(paymentIntent.client_secret)}`;
 
-    // #region debug-point D:moto-order-success
-    (()=>{const fs=require('fs'),p='.dbg/payment-flow-stuck.env';let u='http://127.0.0.1:7777/event',s='payment-flow-stuck';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'D',location:'index.js:/pos/moto/orders:success',msg:'[DEBUG] Backend created POS moto order successfully',data:{orderId,paymentIntentId:paymentIntent.id,hasCardEntryUrl:!!cardEntryUrl},ts:Date.now()})}).catch(()=>{})})();
-    // #endregion
     res.json({ order_id: orderId, payment_intent_id: paymentIntent.id, card_entry_url: cardEntryUrl });
   } catch (error) {
-    // #region debug-point E:moto-order-catch
-    (()=>{const fs=require('fs'),p='.dbg/payment-flow-stuck.env';let u='http://127.0.0.1:7777/event',s='payment-flow-stuck';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'E',location:'index.js:/pos/moto/orders:catch',msg:'[DEBUG] Backend POS moto order threw exception',data:{message:error?.message||String(error)},ts:Date.now()})}).catch(()=>{})})();
-    // #endregion
     console.error('MOTO order error:', error);
     res.status(500).json({ error: error.message });
   }

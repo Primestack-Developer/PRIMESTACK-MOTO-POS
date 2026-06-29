@@ -357,19 +357,26 @@ export default function App() {
   }
 
   const doAddCust = async (e) => {
-    e.preventDefault(); setLoading(true)
+    e.preventDefault(); setLoading(true); setMsg('')
     try {
       const r = await fetch(API + '/pos/customers', { method: 'POST', headers: AH, body: JSON.stringify(newCust) })
       const d = await r.json()
-      const customer = d.customer || d
-      if (customer?.id) {
-        setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
-        await loadCustomers()
-        setPd({ ...pd, customerId: '', customerName: customer.name })
-        setMsg('Customer saved. Verification can be completed later by admin. You can continue this payment now.')
-        setView('confirm-payment')
+      if (!r.ok || d?.error) {
+        throw new Error(d?.error || d?.message || 'Unable to save customer')
       }
-    } catch (e) { console.error(e) }
+      const customer = d.customer || d
+      if (!customer?.id) {
+        throw new Error('Customer was not created. Please try again.')
+      }
+      setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
+      await loadCustomers()
+      setPd(prev => ({ ...prev, customerId: '', customerName: customer.name }))
+      setMsg('Customer saved. Verification can be completed later by admin. You can continue this payment now.')
+      setView('confirm-payment')
+    } catch (e) {
+      console.error(e)
+      setMsg(e.message || 'Unable to save customer')
+    }
     setLoading(false)
   }
 
@@ -377,16 +384,10 @@ export default function App() {
     setLoading(true)
     setLinkOpened(false)
     const paymentWindow = window.open('', '_blank')
-    // #region debug-point A:create-order-click
-    fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"A",location:"pos-app/src/App.jsx:doCreateOrder:start",msg:"[DEBUG] POS create order clicked",data:{amount:pd.amount,customerId:pd.customerId||null,customerName:pd.customerName||null,description:pd.description||'',view},ts:Date.now()})}).catch(()=>{})
-    // #endregion
     try {
       const amount = parseFloat(pd.amount)
 
       if (!amount || amount <= 0) {
-        // #region debug-point A:create-order-invalid-amount
-        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"A",location:"pos-app/src/App.jsx:doCreateOrder:invalid-amount",msg:"[DEBUG] POS create order blocked by invalid amount",data:{amount:pd.amount},ts:Date.now()})}).catch(()=>{})
-        // #endregion
         setMsg('Enter a valid amount')
         if (paymentWindow) paymentWindow.close()
         setLoading(false)
@@ -402,18 +403,12 @@ export default function App() {
       })
       const r = await fetch(API + '/pos/moto/orders', { method: 'POST', headers: AH, body })
       const d = await r.json()
-      // #region debug-point B:create-order-response
-      fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"B",location:"pos-app/src/App.jsx:doCreateOrder:response",msg:"[DEBUG] POS create order response received",data:{ok:r.ok,status:r.status,error:d.error||null,message:d.message||null,orderId:d.order_id||null,hasCardEntryUrl:!!d.card_entry_url},ts:Date.now()})}).catch(()=>{})
-      // #endregion
 
       if (!r.ok || d.error) {
         if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.error || d.message || 'Payment failed')
         setView('failed')
-        // #region debug-point E:create-order-failed-view
-        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"E",location:"pos-app/src/App.jsx:doCreateOrder:failed-view",msg:"[DEBUG] POS moved to failed view after order create error",data:{error:d.error||null,message:d.message||null},ts:Date.now()})}).catch(()=>{})
-        // #endregion
       } else if (d.card_entry_url) {
         const order = {
           order_id: d.order_id,
@@ -437,18 +432,12 @@ export default function App() {
         }
         setView('processing')
         startPolling(d.order_id)
-        // #region debug-point B:create-order-processing-view
-        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"B",location:"pos-app/src/App.jsx:doCreateOrder:processing-view",msg:"[DEBUG] POS moved to processing after successful order create",data:{orderId:d.order_id,linkOpened:!!paymentWindow},ts:Date.now()})}).catch(()=>{})
-        // #endregion
       } else {
         if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.message || d.error || 'Failed to create order')
         setView('failed')
         setTimeout(() => setMsg(''), 5000)
-        // #region debug-point C:create-order-missing-url
-        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"C",location:"pos-app/src/App.jsx:doCreateOrder:missing-url",msg:"[DEBUG] POS order create returned without card entry URL",data:{payloadKeys:Object.keys(d||{})},ts:Date.now()})}).catch(()=>{})
-        // #endregion
       }
     } catch (e) {
       if (paymentWindow) paymentWindow.close()
@@ -456,9 +445,6 @@ export default function App() {
       setMsg('Error creating order')
       setView('failed')
       setTimeout(() => setMsg(''), 5000)
-      // #region debug-point E:create-order-catch
-      fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"E",location:"pos-app/src/App.jsx:doCreateOrder:catch",msg:"[DEBUG] POS create order threw exception",data:{message:e?.message||String(e)},ts:Date.now()})}).catch(()=>{})
-      // #endregion
     }
     setLoading(false)
   }
@@ -790,6 +776,11 @@ export default function App() {
         <div className="card">
           <BackBtn onClick={() => setView('customer-selection')} />
           <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '1.5rem' }}>Add Customer</h2>
+          {msg && (
+            <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.85rem 1rem', borderRadius: '12px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: '600' }}>
+              {msg}
+            </div>
+          )}
           <form onSubmit={doAddCust}>
             <div className="fg"><label className="lbl">Full Name *</label><input className="inp" type="text" value={newCust.name} onChange={e => setNewCust({ ...newCust, name: e.target.value })} required placeholder="John Smith" /></div>
             <div className="fg"><label className="lbl">Email</label><input className="inp" type="email" value={newCust.email} onChange={e => setNewCust({ ...newCust, email: e.target.value })} placeholder="john@email.com" /></div>
