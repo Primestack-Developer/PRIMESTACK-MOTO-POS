@@ -73,7 +73,13 @@ const schemas = {
     name: z.string().min(1, 'Name is required').max(100),
     email: z.string().email('Invalid email').optional().or(z.literal('')).transform(v => v || null),
     phone: z.string().max(30).optional().or(z.literal('')).transform(v => v || null),
-    billingAddress: z.string().max(200).optional().or(z.literal('')).transform(v => v || null)
+    billingAddress: z.string().max(200).optional().or(z.literal('')).transform(v => v || null),
+    documents: z.array(z.object({
+      name: z.string().min(1).max(255),
+      type: z.string().min(1).max(100),
+      base64: z.string().min(1)
+    })).optional().default([]),
+    notes: z.string().max(1000).optional().or(z.literal('')).transform(v => v || null)
   }),
   activatePOS: z.object({
     activation_code: z.string().min(9, 'Activation code must be in format XXXX-XXXX').max(9),
@@ -1270,8 +1276,12 @@ router.get('/merchant/customers', authenticateMerchant, async (req, res) => {
   try {
     const customers = await prisma.customer.findMany({
       where: { merchantId: req.merchant.id },
+      include: { verification: true },
       orderBy: { createdAt: 'desc' }
     });
+    // #region debug-point C:get-customers-response
+    (()=>{const fs=require('fs'),p='.dbg/customer-doc-submit.env';let u='http://127.0.0.1:7777/event',s='customer-doc-submit';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'C',location:'index.js:/merchant/customers:get',msg:'[DEBUG] Returning merchant customers list',data:{customerCount:customers.length,verificationStates:customers.slice(0,5).map(c=>({id:c.id,name:c.name,verificationStatus:c.verification?.status||null}))},ts:Date.now()})}).catch(()=>{})})();
+    // #endregion
     res.json({ customers });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1280,11 +1290,39 @@ router.get('/merchant/customers', authenticateMerchant, async (req, res) => {
 
 router.post('/merchant/customers', authenticateMerchant, validate(schemas.createCustomer), async (req, res) => {
   try {
-    const { name, email, phone, billingAddress } = req.body;
+    const { name, email, phone, billingAddress, documents = [], notes = null } = req.body;
+    // #region debug-point B:create-customer-entry
+    (()=>{const fs=require('fs'),p='.dbg/customer-doc-submit.env';let u='http://127.0.0.1:7777/event',s='customer-doc-submit';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'B',location:'index.js:/merchant/customers:post:entry',msg:'[DEBUG] Merchant create customer request received',data:{merchantId:req.merchant.id,customerName:name,documentCount:Array.isArray(documents)?documents.length:-1,noteLength:(notes||'').length},ts:Date.now()})}).catch(()=>{})})();
+    // #endregion
     const customer = await prisma.customer.create({
       data: { merchantId: req.merchant.id, name, email: email || null, phone: phone || null, billingAddress: billingAddress || null }
     });
-    res.json({ customer });
+
+    let verification = null;
+    if (Array.isArray(documents) && documents.length > 0) {
+      verification = await prisma.customerVerification.create({
+        data: {
+          customerId: customer.id,
+          merchantId: req.merchant.id,
+          documentUrls: JSON.stringify(documents),
+          notes: notes || null
+        }
+      });
+
+      await prisma.adminNotification.create({
+        data: {
+          type: 'verification_submitted',
+          title: 'New Customer Verification Request',
+          message: `${req.merchant.businessName || req.merchant.email || req.merchant.merchantId} submitted customer verification for "${customer.name}". Documents ready for review.`,
+          data: JSON.stringify({ verificationId: verification.id, customerId: customer.id, merchantId: req.merchant.merchantId })
+        }
+      });
+    }
+
+    // #region debug-point B:create-customer-exit
+    (()=>{const fs=require('fs'),p='.dbg/customer-doc-submit.env';let u='http://127.0.0.1:7777/event',s='customer-doc-submit';try{const e=fs.readFileSync(p,'utf8');u=e.match(/DEBUG_SERVER_URL=(.+)/)?.[1]||u;s=e.match(/DEBUG_SESSION_ID=(.+)/)?.[1]||s}catch{}fetch(u,{method:'POST',body:JSON.stringify({sessionId:s,runId:'pre-fix',hypothesisId:'B',location:'index.js:/merchant/customers:post:exit',msg:'[DEBUG] Merchant customer create completed',data:{customerId:customer.id,verificationCreated:!!verification,verificationStatus:verification?.status||null},ts:Date.now()})}).catch(()=>{})})();
+    // #endregion
+    res.json({ customer, verification });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
