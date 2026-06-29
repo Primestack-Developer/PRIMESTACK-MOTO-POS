@@ -340,8 +340,28 @@ async function handleStripeWebhook(req, res) {
   }
 
   try {
+    const webhookObject = event.data.object;
+    const webhookOrderId = webhookObject?.metadata?.order_id || webhookObject?.metadata?.orderId || null;
+    let enrichedWebhookPayload = webhookObject;
+
+    if (webhookOrderId) {
+      const webhookOrder = await prisma.order.findUnique({
+        where: { orderId: webhookOrderId },
+        include: { merchant: true }
+      });
+      if (webhookOrder) {
+        enrichedWebhookPayload = {
+          ...webhookObject,
+          dashboard_order_id: webhookOrder.orderId,
+          dashboard_merchant_id: webhookOrder.merchant?.merchantId || webhookOrder.merchantId,
+          dashboard_merchant_name: webhookOrder.merchant?.businessName || webhookOrder.merchant?.name || 'Unknown Merchant',
+          dashboard_received_at: new Date().toISOString()
+        };
+      }
+    }
+
     await prisma.webhookLog.create({
-      data: { eventType: event.type, payload: JSON.stringify(event.data.object) }
+      data: { eventType: event.type, payload: JSON.stringify(enrichedWebhookPayload) }
     });
 
     if (event.type === 'payment_intent.succeeded') {
@@ -1105,6 +1125,31 @@ router.post('/admin/pos-devices/:posId/status', authenticateAdmin, validate(sche
     });
     res.json({ pos_id: updated.posId, status: updated.status });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/admin/pos-devices/:posId', authenticateAdmin, async (req, res) => {
+  try {
+    const { posId } = req.params;
+    const device = await prisma.pOSDevice.findUnique({ where: { posId } });
+    if (!device) return res.status(404).json({ error: 'POS device not found' });
+
+    const linkedRecords = await prisma.pOSDevice.findUnique({
+      where: { posId },
+      select: { _count: { select: { orders: true, transactions: true } } }
+    });
+    const hasPaymentHistory = (linkedRecords?._count?.orders || 0) > 0 || (linkedRecords?._count?.transactions || 0) > 0;
+    if (hasPaymentHistory) {
+      return res.status(400).json({
+        error: 'This POS device has payment history. Disable it instead to preserve transaction records.'
+      });
+    }
+
+    await prisma.pOSDevice.delete({ where: { posId } });
+    res.json({ message: 'POS device deleted successfully', pos_id: posId });
+  } catch (error) {
+    console.error('Delete POS device error:', error);
     res.status(500).json({ error: error.message });
   }
 });

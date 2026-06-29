@@ -83,6 +83,10 @@ const GLOBAL_CSS = `
   .row-hover { transition: background 0.12s; }
   .row-hover:hover { background: rgba(200,168,112,0.08) !important; cursor: pointer; }
   input:focus, textarea:focus { border-color: #c8a870 !important; box-shadow: 0 0 0 3px rgba(200,168,112,0.12); }
+  .message-input { background:#000 !important; color:#fff !important; border-color:#000 !important; }
+  .message-input::placeholder { color:rgba(255,255,255,0.68); }
+  @keyframes marqueeScroll { from{transform:translateX(100%)} to{transform:translateX(-100%)} }
+  .marquee-track { display:inline-block; white-space:nowrap; min-width:100%; animation:marqueeScroll 24s linear infinite; }
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #c8a870; border-radius: 3px; }
@@ -477,6 +481,23 @@ export default function App() {
     }
   }
 
+  const deletePosDevice = async (posId) => {
+    if (!confirm('Delete this POS device? This action cannot be undone.')) return
+    try {
+      const r = await fetch(`${API}/admin/pos-devices/${posId}`, { method:'DELETE', headers:H })
+      const d = await r.json()
+      if (d.message) {
+        setMsg({ t:'s', text:'POS device deleted successfully.' })
+        setSelPos(null)
+        fetchJSON(`${API}/admin/pos-devices`, H, d => d.posDevices && setPosDevices(d.posDevices))
+      } else {
+        setMsg({ t:'e', text:d.error || 'Failed to delete POS device' })
+      }
+    } catch(e) {
+      setMsg({ t:'e', text:'Error deleting POS device' })
+    }
+  }
+
 
 
   // Start alarm when new unread notifications arrive, stop when all read
@@ -587,6 +608,15 @@ export default function App() {
     a.href = URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}))
     a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
+  }
+
+  const parseWebhookPayload = (webhook) => {
+    try { return JSON.parse(webhook.payload || '{}') } catch { return {} }
+  }
+
+  const webhookMerchantName = (webhook) => {
+    const payload = parseWebhookPayload(webhook)
+    return payload.dashboard_merchant_name || payload.metadata?.merchant_name || payload.metadata?.merchant_id || 'Unknown'
   }
 
   const handleDownload = (doc) => {
@@ -936,6 +966,12 @@ export default function App() {
             </div>
           </header>
 
+          <div style={{height:'34px',background:'#000',color:'#fff',display:'flex',alignItems:'center',overflow:'hidden',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+            <div className="marquee-track" style={{fontSize:'0.85rem',fontWeight:'700',letterSpacing:'0.02em'}}>
+              Admin Control Center — Merchant Verification, POS Management, Settlement Monitoring.
+            </div>
+          </div>
+
           {/* Message */}
           {msg && (
             <div style={{margin:'1rem 2rem 0',padding:'0.875rem 1rem',borderRadius:'12px',fontSize:'0.875rem',fontWeight:'500',
@@ -1199,6 +1235,10 @@ export default function App() {
                   <button className="lift-sm" style={selPos.status==='active'?BTND:BTNP}
                     onClick={()=>togglePos(selPos.posId,selPos.status)}>
                     {selPos.status==='active'?'🔒 Disable POS':'✅ Enable POS'}
+                  </button>
+                  <button className="lift-sm" style={{...BTND,marginTop:'0.75rem',background:'#dc2626'}}
+                    onClick={()=>deletePosDevice(selPos.posId)}>
+                    Delete POS Device
                   </button>
                 </WCard>
               </div>
@@ -1488,9 +1528,10 @@ export default function App() {
               <div>
                 <PgHead title="Webhook Logs" sub={`${webhooks.length} events`}/>
                 <WCard>
-                  <Tbl heads={['Event Type','Status','Received At']}
+                  <Tbl heads={['Event Type','Merchant','Status','Received At']}
                     rows={webhooks.map(w=>[
                       <span style={{fontWeight:'700',color:C.textDark}}>{w.eventType}</span>,
+                      <span style={{fontWeight:'700',color:C.textDark}}>{webhookMerchantName(w)}</span>,
                       <span style={{background:C.accentLight,color:C.accentDark,padding:'0.2rem 0.6rem',borderRadius:'20px',fontSize:'0.72rem',fontWeight:'700'}}>Processed</span>,
                       new Date(w.receivedAt||w.createdAt).toLocaleString()
                     ])}
@@ -1506,6 +1547,7 @@ export default function App() {
                 <WCard title="Webhook Event">
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.875rem',marginBottom:'1.25rem'}}>
                     <InfoBox k="Event Type" v={selWebhook.eventType}/>
+                    <InfoBox k="Merchant" v={webhookMerchantName(selWebhook)}/>
                     <InfoBox k="Received At" v={new Date(selWebhook.receivedAt||selWebhook.createdAt).toLocaleString()}/>
                   </div>
                   <p style={{fontSize:'0.75rem',fontWeight:'700',color:C.textMuted,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'0.5rem'}}>Raw Payload</p>
@@ -1632,10 +1674,10 @@ export default function App() {
                     <div ref={chatEndRef}/>
                   </div>
                   <div style={{padding:'0.75rem',borderTop:`1px solid ${C.border}`,display:'flex',gap:'0.5rem',flexShrink:0}}>
-                    <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
+                    <input className="message-input" value={chatInput} onChange={e=>setChatInput(e.target.value)}
                       onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&(e.preventDefault(),sendChatMsg())}
                       placeholder="Type a message..." maxLength={1000}
-                      style={{flex:1,padding:'0.625rem 0.875rem',border:`1.5px solid ${C.border}`,borderRadius:'12px',fontSize:'0.875rem',outline:'none',color:C.textDark}} />
+                      style={{flex:1,padding:'0.625rem 0.875rem',border:'1.5px solid #000',borderRadius:'12px',fontSize:'0.875rem',outline:'none',background:'#000',color:'#fff'}} />
                     <button onClick={sendChatMsg} disabled={!chatInput.trim()}
                       style={{width:'40px',height:'40px',background:chatInput.trim()?`linear-gradient(135deg,${C.accent},${C.accentDark})`:'rgba(232,224,208,0.10)',border:'none',borderRadius:'12px',cursor:chatInput.trim()?'pointer':'not-allowed',color:'white',fontSize:'1.1rem',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                       ➤

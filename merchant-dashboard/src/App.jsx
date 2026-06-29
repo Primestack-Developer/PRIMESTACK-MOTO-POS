@@ -50,6 +50,10 @@ input:focus,textarea:focus{
   box-shadow:0 0 0 3px rgba(200,168,112,.12);
   outline:none
 }
+.message-input{background:#000!important;color:#fff!important;border-color:#000!important}
+.message-input::placeholder{color:rgba(255,255,255,.68)}
+@keyframes marqueeScroll{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+.marquee-track{display:inline-block;white-space:nowrap;min-width:100%;animation:marqueeScroll 30s linear infinite}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-thumb{background:${C.accent};border-radius:3px}
 
@@ -658,6 +662,12 @@ export default function App() {
             </div>
           </header>
 
+          <div style={{height:'38px',background:'#000',color:'#fff',display:'flex',alignItems:'center',overflow:'hidden',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+            <div className="marquee-track" style={{fontSize:'0.85rem',fontWeight:'700',letterSpacing:'0.02em'}}>
+              Your portal is up to date. Real MOTO Payments. Zero 3DS. Zero 2D Secure. For technical issues, reach us below the chatbox. Built for Verified Merchants, Enterprise-Grade MOTO POS for High-Trust Merchants — Fast, Secure, Frictionless.
+            </div>
+          </div>
+
           {msg&&<div style={{margin: isMobile ? '1rem 1rem 0' : '1rem 2rem 0',padding:'0.875rem 1rem',borderRadius:'12px',fontSize:'0.875rem',fontWeight:'500',background:msg.t==='s'?C.accentLight:C.redLight,color:msg.t==='s'?C.accentDark:C.red,border:`1px solid ${msg.t==='s'?C.accentMid:'#fecaca'}`}}>{msg.text}</div>}
 
           <main style={{flex:1,padding: isMobile ? '1rem' : '1.5rem 2rem',overflowY:'auto'}}>
@@ -1099,6 +1109,7 @@ export default function App() {
               gap: '0.75rem'
             }}>
               <input
+                className="message-input"
                 type="text"
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
@@ -1106,7 +1117,10 @@ export default function App() {
                 style={{
                   ...INP,
                   flex: 1,
-                  marginBottom: 0
+                  marginBottom: 0,
+                  background: '#000',
+                  color: '#fff',
+                  borderColor: '#000'
                 }}
               />
               <button type="submit" disabled={!chatInput.trim()} style={{
@@ -1117,6 +1131,9 @@ export default function App() {
                 Send
               </button>
             </form>
+            <div style={{padding:'0 1rem 1rem',background:'white',color:'#14532d',fontSize:'0.78rem',fontWeight:'700'}}>
+              For technical issues, reach us below the chatbox.
+            </div>
           </div>
         </div>
       )}
