@@ -80,7 +80,7 @@ const BackBtn = ({ onClick }) => (
 )
 
 /* ── Main App ───────────────────────────────────────────────────────────────── */
-const APP_VERSION = '1.0.4'; // Increment this to force clear cache
+const APP_VERSION = '1.0.5'; // Increment this to force clear cache
 const PENDING_MOTO_KEY = 'pendingMotoPayment'
 
 export default function App() {
@@ -365,8 +365,9 @@ export default function App() {
       if (customer?.id) {
         setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
         await loadCustomers()
-        setPd({ ...pd, customerId: customer.id, customerName: customer.name })
-        setView('customer-selection')
+        setPd({ ...pd, customerId: '', customerName: customer.name })
+        setMsg('Customer saved. Verification can be completed later by admin. You can continue this payment now.')
+        setView('confirm-payment')
       }
     } catch (e) { console.error(e) }
     setLoading(false)
@@ -376,10 +377,16 @@ export default function App() {
     setLoading(true)
     setLinkOpened(false)
     const paymentWindow = window.open('', '_blank')
+    // #region debug-point A:create-order-click
+    fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"A",location:"pos-app/src/App.jsx:doCreateOrder:start",msg:"[DEBUG] POS create order clicked",data:{amount:pd.amount,customerId:pd.customerId||null,customerName:pd.customerName||null,description:pd.description||'',view},ts:Date.now()})}).catch(()=>{})
+    // #endregion
     try {
       const amount = parseFloat(pd.amount)
 
       if (!amount || amount <= 0) {
+        // #region debug-point A:create-order-invalid-amount
+        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"A",location:"pos-app/src/App.jsx:doCreateOrder:invalid-amount",msg:"[DEBUG] POS create order blocked by invalid amount",data:{amount:pd.amount},ts:Date.now()})}).catch(()=>{})
+        // #endregion
         setMsg('Enter a valid amount')
         if (paymentWindow) paymentWindow.close()
         setLoading(false)
@@ -395,12 +402,18 @@ export default function App() {
       })
       const r = await fetch(API + '/pos/moto/orders', { method: 'POST', headers: AH, body })
       const d = await r.json()
+      // #region debug-point B:create-order-response
+      fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"B",location:"pos-app/src/App.jsx:doCreateOrder:response",msg:"[DEBUG] POS create order response received",data:{ok:r.ok,status:r.status,error:d.error||null,message:d.message||null,orderId:d.order_id||null,hasCardEntryUrl:!!d.card_entry_url},ts:Date.now()})}).catch(()=>{})
+      // #endregion
 
       if (!r.ok || d.error) {
         if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.error || d.message || 'Payment failed')
         setView('failed')
+        // #region debug-point E:create-order-failed-view
+        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"E",location:"pos-app/src/App.jsx:doCreateOrder:failed-view",msg:"[DEBUG] POS moved to failed view after order create error",data:{error:d.error||null,message:d.message||null},ts:Date.now()})}).catch(()=>{})
+        // #endregion
       } else if (d.card_entry_url) {
         const order = {
           order_id: d.order_id,
@@ -424,12 +437,18 @@ export default function App() {
         }
         setView('processing')
         startPolling(d.order_id)
+        // #region debug-point B:create-order-processing-view
+        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"B",location:"pos-app/src/App.jsx:doCreateOrder:processing-view",msg:"[DEBUG] POS moved to processing after successful order create",data:{orderId:d.order_id,linkOpened:!!paymentWindow},ts:Date.now()})}).catch(()=>{})
+        // #endregion
       } else {
         if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.message || d.error || 'Failed to create order')
         setView('failed')
         setTimeout(() => setMsg(''), 5000)
+        // #region debug-point C:create-order-missing-url
+        fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"C",location:"pos-app/src/App.jsx:doCreateOrder:missing-url",msg:"[DEBUG] POS order create returned without card entry URL",data:{payloadKeys:Object.keys(d||{})},ts:Date.now()})}).catch(()=>{})
+        // #endregion
       }
     } catch (e) {
       if (paymentWindow) paymentWindow.close()
@@ -437,6 +456,9 @@ export default function App() {
       setMsg('Error creating order')
       setView('failed')
       setTimeout(() => setMsg(''), 5000)
+      // #region debug-point E:create-order-catch
+      fetch("http://127.0.0.1:7777/event",{method:"POST",body:JSON.stringify({sessionId:"payment-flow-stuck",runId:"pre-fix",hypothesisId:"E",location:"pos-app/src/App.jsx:doCreateOrder:catch",msg:"[DEBUG] POS create order threw exception",data:{message:e?.message||String(e)},ts:Date.now()})}).catch(()=>{})
+      // #endregion
     }
     setLoading(false)
   }
@@ -799,6 +821,12 @@ export default function App() {
             {pd.description ? <InfoRow k="Description" v={pd.description} /> : null}
             <InfoRow k="Type" v="MOTO (Card Not Present)" />
           </div>
+
+          {!pd.customerId && pd.customerName && pd.customerName !== 'Walk-in Customer' && (
+            <div style={{ background: '#fef3c7', color: '#92400e', padding: '0.85rem 1rem', borderRadius: '12px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: '600', border: '1px solid #fde68a' }}>
+              This payment will continue with the entered customer name. Full verified-customer status can be completed later from the merchant panel.
+            </div>
+          )}
 
           {msg && (
             <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.85rem 1rem', borderRadius: '12px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: '600' }}>
