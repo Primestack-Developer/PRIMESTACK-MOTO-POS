@@ -80,7 +80,7 @@ const BackBtn = ({ onClick }) => (
 )
 
 /* ── Main App ───────────────────────────────────────────────────────────────── */
-const APP_VERSION = '1.0.2'; // Increment this to force clear cache
+const APP_VERSION = '1.0.3'; // Increment this to force clear cache
 
 export default function App() {
   // Clear cache on version change
@@ -111,7 +111,6 @@ export default function App() {
   const [linkOpened, setLinkOpened] = useState(false)
   const [pd, setPd] = useState({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
   const [newCust, setNewCust]     = useState({ name: '', email: '', phone: '', billingAddress: '' })
-  const [card, setCard] = useState({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
 
   const token = creds ? creds.api_token : null;
   const AH = token ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } : {};
@@ -232,17 +231,6 @@ export default function App() {
     } catch(e) {}
   }
 
-  const formatCardNumber = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 19)
-    return digits.replace(/(.{4})/g, '$1 ').trim()
-  }
-
-  const formatCardExpiry = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 4)
-    if (digits.length < 3) return digits
-    return digits.slice(0, 2) + '/' + digits.slice(2)
-  }
-
   useEffect(() => { if (creds) loadCustomers() }, [creds])
 
   const loadCustomers = async () => {
@@ -307,7 +295,6 @@ export default function App() {
     setCurOrder(null)
     setLinkOpened(false)
     setNewCust({ name: '', email: '', phone: '', billingAddress: '' })
-    setCard({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
     setMsg('')
   }
 
@@ -329,58 +316,59 @@ export default function App() {
 
   const doCreateOrder = async () => {
     setLoading(true)
-    setMsg('')
-    setView('processing')
+    setLinkOpened(false)
+    const paymentWindow = window.open('', '_blank')
     try {
       const amount = parseFloat(pd.amount)
-      const cardNumber = card.cardNumber.replace(/\D/g, '')
-      const cardExpiry = formatCardExpiry(card.cardExpiry)
-      const cardCvc = card.cardCvc.replace(/\D/g, '').slice(0, 4)
-      const cardholderName = card.cardholderName.trim()
 
       if (!amount || amount <= 0) {
         setMsg('Enter a valid amount')
-        setView('confirm-payment')
-        setLoading(false)
-        return
-      }
-
-      if (!cardholderName || cardNumber.length < 12 || !/^\d{2}\/\d{2}$/.test(cardExpiry) || cardCvc.length < 3) {
-        setMsg('Enter valid card details')
-        setView('confirm-payment')
+        if (paymentWindow) paymentWindow.close()
         setLoading(false)
         return
       }
 
       const body = JSON.stringify({
-        cardNumber,
-        cardExpiry,
-        cardCvc,
-        cardholderName,
-        amount,
-        currency: 'USD',
+        amount: Math.round(amount * 100),
+        currency: 'usd',
         description: pd.description || null,
-        customerId: pd.customerId || null
+        customer_id: pd.customerId || null,
+        customer_name: pd.customerName || null
       })
-      const r = await fetch(API + '/pos/moto-payment', { method: 'POST', headers: AH, body })
+      const r = await fetch(API + '/pos/moto/orders', { method: 'POST', headers: AH, body })
       const d = await r.json()
 
-      if (!r.ok || d.error || d.success === false) {
+      if (!r.ok || d.error) {
+        if (paymentWindow) paymentWindow.close()
         playFailureSound()
         setMsg(d.error || d.message || 'Payment failed')
         setView('failed')
+      } else if (d.card_entry_url) {
+        const order = {
+          order_id: d.order_id,
+          paymentIntentId: d.payment_intent_id,
+          card_entry_url: d.card_entry_url,
+          payment: null
+        }
+        setMsg('')
+        setCurOrder(order)
+        if (paymentWindow) {
+          paymentWindow.location.href = d.card_entry_url
+          setLinkOpened(true)
+        }
+        setView('processing')
+        startPolling(d.order_id)
       } else {
-        playSuccessSound()
-        setCurOrder({
-          orderId: d.orderId,
-          paymentIntentId: d.paymentIntentId,
-          payment: d.cardBrand ? { cardBrand: d.cardBrand, cardLast4: d.cardLast4 } : null
-        })
-        setView('success')
+        if (paymentWindow) paymentWindow.close()
+        playFailureSound()
+        setMsg(d.message || d.error || 'Failed to create order')
+        setView('failed')
+        setTimeout(() => setMsg(''), 5000)
       }
     } catch (e) {
+      if (paymentWindow) paymentWindow.close()
       playFailureSound()
-      setMsg('Error processing payment')
+      setMsg('Error creating order')
       setView('failed')
       setTimeout(() => setMsg(''), 5000)
     }
@@ -416,7 +404,6 @@ export default function App() {
 
   const doReset = () => {
     setPd({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
-    setCard({ cardholderName: '', cardNumber: '', cardExpiry: '', cardCvc: '' })
     setCurOrder(null)
     setLinkOpened(false)
     setMsg('')
@@ -760,64 +747,15 @@ export default function App() {
 
           <div className="info-box" style={{ marginTop: '1rem' }}>
             <p style={{ fontSize: '0.72rem', color: '#c8a870', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
-              Card Details
+              Stripe Hosted Card Entry
             </p>
-            <div className="fg" style={{ marginBottom: '0.75rem' }}>
-              <label className="lbl">Cardholder Name</label>
-              <input
-                className="inp"
-                type="text"
-                value={card.cardholderName}
-                onChange={e => setCard({ ...card, cardholderName: e.target.value })}
-                placeholder={pd.customerId ? pd.customerName : 'Name on card'}
-                autoComplete="cc-name"
-              />
-            </div>
-            <div className="fg" style={{ marginBottom: '0.75rem' }}>
-              <label className="lbl">Card Number</label>
-              <input
-                className="inp"
-                type="text"
-                inputMode="numeric"
-                value={card.cardNumber}
-                onChange={e => setCard({ ...card, cardNumber: formatCardNumber(e.target.value) })}
-                placeholder="1234 5678 9012 3456"
-                autoComplete="cc-number"
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="fg" style={{ marginBottom: 0 }}>
-                <label className="lbl">Expiry</label>
-                <input
-                  className="inp"
-                  type="text"
-                  inputMode="numeric"
-                  value={card.cardExpiry}
-                  onChange={e => setCard({ ...card, cardExpiry: formatCardExpiry(e.target.value) })}
-                  placeholder="MM/YY"
-                  autoComplete="cc-exp"
-                />
-              </div>
-              <div className="fg" style={{ marginBottom: 0 }}>
-                <label className="lbl">CVC</label>
-                <input
-                  className="inp"
-                  type="password"
-                  inputMode="numeric"
-                  value={card.cardCvc}
-                  onChange={e => setCard({ ...card, cardCvc: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  placeholder="CVC"
-                  autoComplete="cc-csc"
-                />
-              </div>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'rgba(232,224,208,0.72)', lineHeight: 1.5, margin: '1rem 0 0' }}>
-              This payment is sent directly as a MOTO transaction so the hosted `3D Secure` flow is not used.
+            <p style={{ fontSize: '0.85rem', color: 'rgba(232,224,208,0.72)', lineHeight: 1.5, margin: 0 }}>
+              The Stripe payment processor will open in a new tab for secure card entry.
             </p>
           </div>
 
           <button onClick={doCreateOrder} className="g-btn lift" style={{ padding: '1.2rem', fontSize: '1.05rem', marginTop: '1rem' }} disabled={loading}>
-            {loading ? 'Processing Payment...' : 'Process MOTO Payment'}
+            {loading ? 'Opening Stripe...' : 'Open Stripe Card Entry'}
           </button>
         </div>
       </div>
@@ -832,14 +770,33 @@ export default function App() {
           <div className="pulse" style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#e8e0d0', marginBottom: '0.5rem' }}>Processing Payment</h2>
           <p style={{ color: 'rgba(232,224,208,0.62)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-            Sending the card directly to the MOTO payment endpoint...
+            {polling ? 'Waiting for payment confirmation...' : 'Stripe payment window opened in new tab'}
           </p>
           <div className="info-box" style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
             <InfoRow k="Amount" v={'$' + parseFloat(pd.amount || 0).toFixed(2)} />
             <InfoRow k="Order ID" v={curOrder ? (curOrder.orderId || curOrder.order_id || 'Processing...') : 'Processing...'} />
             <InfoRow k="Customer" v={pd.customerName} />
           </div>
-          <p style={{ color: '#c8a870', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>Please wait while the transaction is confirmed.</p>
+
+          {!linkOpened && curOrder && curOrder.card_entry_url && (
+            <div>
+              <a href={curOrder.card_entry_url} target="_blank" rel="noreferrer"
+                onClick={() => setLinkOpened(true)}
+                style={{ display: 'block', padding: '0.875rem', background: '#1e40af', color: 'white', borderRadius: '14px', textDecoration: 'none', fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.75rem' }}>
+                Open Payment Page
+              </a>
+            </div>
+          )}
+
+          {linkOpened && (
+            <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '0.875rem', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#c8a870', margin: 0 }}>
+                Stripe payment page opened. Waiting for customer to complete payment...
+              </p>
+            </div>
+          )}
+
+          {polling && <p style={{ color: '#c8a870', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>Checking payment status...</p>}
           <button onClick={doReset} className="o-btn">Cancel</button>
         </div>
       </div>
@@ -986,7 +943,7 @@ export default function App() {
           <div className="info-box">
             <InfoRow k="Merchant" v={creds ? creds.merchant_name : ''} />
             <InfoRow k="POS ID" v={creds ? creds.pos_id : ''} />
-            <InfoRow k="Version" v="1.0.2" />
+            <InfoRow k="Version" v="1.0.3" />
             <InfoRow k="Mode" v="MOTO" />
           </div>
           <button onClick={() => { loadCustomers(); loadOrders() }} className="o-btn sm" style={{ marginBottom: '0.5rem' }}>

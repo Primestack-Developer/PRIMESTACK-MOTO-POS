@@ -1607,35 +1607,29 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
     };
 
     const paymentIntent = await getStripe().paymentIntents.create({
-      mode: 'payment',
+      amount,
+      currency: normalizedCurrency,
       payment_method_types: ['card'],
+      description: description || 'MOTO Payment',
       metadata: {
         ...metadata,
         customer_id: customer_id || ''
-      },
-      payment_intent_data: {
-        description: description || 'MOTO Payment',
-        metadata
-      },
-      line_items: [{
-        price_data: {
-          currency: normalizedCurrency,
-          product_data: { name: description || 'MOTO Payment' },
-          unit_amount: amount
-        },
-        quantity: 1
-      }],
-      billing_address_collection: 'auto', // optional — not forced for international cards
-      phone_number_collection: { enabled: false },
-      success_url: `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/pos?payment=success&order_id=${orderId}`,
-      cancel_url: `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/pos?payment=cancelled&order_id=${orderId}`
+      }
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentIntentId: paymentIntent.id }
     });
 
     await prisma.deviceLog.create({
       data: { posId: req.pos.id, merchantId: req.pos.merchantId, action: 'order_created', details: JSON.stringify({ orderId, amount }) }
     });
 
-    res.json({ order_id: orderId, payment_intent_id: null, card_entry_url: checkoutSession.url });
+    const baseUrl = process.env.POS_URL || `${req.protocol}://${req.get('host')}`;
+    const cardEntryUrl = `${baseUrl}/moto-card-entry/${encodeURIComponent(orderId)}?client_secret=${encodeURIComponent(paymentIntent.client_secret)}`;
+
+    res.json({ order_id: orderId, payment_intent_id: paymentIntent.id, card_entry_url: cardEntryUrl });
   } catch (error) {
     console.error('MOTO order error:', error);
     res.status(500).json({ error: error.message });
