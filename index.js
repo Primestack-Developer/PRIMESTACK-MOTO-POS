@@ -1497,7 +1497,8 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
     if (!order) return res.status(404).send('Order not found.');
 
     const amount = `${order.currency} ${order.amount.toFixed(2)}`;
-    const returnUrl = `${process.env.POS_URL || req.protocol + '://' + req.get('host')}/?payment=return&order_id=${encodeURIComponent(orderId)}`;
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const returnUrl = `${origin}/?payment=return&order_id=${encodeURIComponent(orderId)}`;
 
     res.type('html').send(`<!doctype html>
 <html lang="en">
@@ -1626,8 +1627,8 @@ router.post('/pos/moto/orders', authenticatePOS, validate(schemas.createMotoOrde
       data: { posId: req.pos.id, merchantId: req.pos.merchantId, action: 'order_created', details: JSON.stringify({ orderId, amount }) }
     });
 
-    const baseUrl = process.env.POS_URL || `${req.protocol}://${req.get('host')}`;
-    const cardEntryUrl = `${baseUrl}/moto-card-entry/${encodeURIComponent(orderId)}?client_secret=${encodeURIComponent(paymentIntent.client_secret)}`;
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const cardEntryUrl = `${origin}/moto-card-entry/${encodeURIComponent(orderId)}?client_secret=${encodeURIComponent(paymentIntent.client_secret)}`;
 
     res.json({ order_id: orderId, payment_intent_id: paymentIntent.id, card_entry_url: cardEntryUrl });
   } catch (error) {

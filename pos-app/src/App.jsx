@@ -81,6 +81,7 @@ const BackBtn = ({ onClick }) => (
 
 /* ── Main App ───────────────────────────────────────────────────────────────── */
 const APP_VERSION = '1.0.3'; // Increment this to force clear cache
+const PENDING_MOTO_KEY = 'pendingMotoPayment'
 
 export default function App() {
   // Clear cache on version change
@@ -233,6 +234,45 @@ export default function App() {
 
   useEffect(() => { if (creds) loadCustomers() }, [creds])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const paymentStatus = params.get('payment')
+    const orderId = params.get('order_id')
+
+    if (!paymentStatus || !orderId) return
+
+    let pending = null
+    try {
+      const stored = localStorage.getItem(PENDING_MOTO_KEY)
+      pending = stored ? JSON.parse(stored) : null
+    } catch (e) {}
+
+    if (pending?.orderId === orderId) {
+      setPd({
+        amount: pending.amount || '',
+        description: pending.description || '',
+        customerId: pending.customerId || '',
+        customerName: pending.customerName || 'Walk-in Customer'
+      })
+      setCurOrder({
+        orderId,
+        order_id: orderId,
+        paymentIntentId: pending.paymentIntentId || null,
+        payment: null
+      })
+    }
+
+    if (paymentStatus === 'return' || paymentStatus === 'success') {
+      setView('processing')
+      startPolling(orderId)
+    } else if (paymentStatus === 'cancelled') {
+      setMsg('Payment was cancelled')
+      setView('failed')
+    }
+
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }, [])
+
   const loadCustomers = async () => {
     try {
       const r = await fetch(API + '/pos/customers', { headers: AH })
@@ -350,6 +390,14 @@ export default function App() {
           card_entry_url: d.card_entry_url,
           payment: null
         }
+        localStorage.setItem(PENDING_MOTO_KEY, JSON.stringify({
+          orderId: d.order_id,
+          paymentIntentId: d.payment_intent_id || null,
+          amount: pd.amount,
+          description: pd.description || '',
+          customerId: pd.customerId || '',
+          customerName: pd.customerName || 'Walk-in Customer'
+        }))
         setMsg('')
         setCurOrder(order)
         if (paymentWindow) {
@@ -383,17 +431,20 @@ export default function App() {
         const d = await r.json()
         if (d.status === 'paid') {
           clearInterval(iv)
+          localStorage.removeItem(PENDING_MOTO_KEY)
           playSuccessSound()
           setCurOrder({ orderId: d.order_id, payment: d.card_brand ? { cardBrand: d.card_brand, cardLast4: d.last4 } : null })
           setView('success')
           setPolling(false)
         } else if (d.status === 'failed') {
           clearInterval(iv)
+          localStorage.removeItem(PENDING_MOTO_KEY)
           playFailureSound()
           setView('failed')
           setPolling(false)
         } else if (d.status === 'flagged') {
           clearInterval(iv)
+          localStorage.removeItem(PENDING_MOTO_KEY)
           playFailureSound()
           setView('flagged')
           setPolling(false)
@@ -403,6 +454,7 @@ export default function App() {
   }
 
   const doReset = () => {
+    localStorage.removeItem(PENDING_MOTO_KEY)
     setPd({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
     setCurOrder(null)
     setLinkOpened(false)
