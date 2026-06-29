@@ -441,10 +441,28 @@ export default function App() {
       }
     } catch (e) {
       if (paymentWindow) paymentWindow.close()
-      playFailureSound()
-      setMsg('Error creating order')
-      setView('failed')
-      setTimeout(() => setMsg(''), 5000)
+      // ── Offline Queue — save order locally if no internet ──
+      if (!navigator.onLine || (e && e.message && (e.message.includes('fetch') || e.message.includes('network')))) {
+        const queuedOrder = {
+          id: 'Q-' + Date.now(),
+          amount: pd.amount,
+          description: pd.description || '',
+          customerId: pd.customerId || '',
+          customerName: pd.customerName || 'Walk-in Customer',
+          timestamp: new Date().toISOString(),
+          status: 'queued'
+        }
+        const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]')
+        queue.push(queuedOrder)
+        localStorage.setItem('offlineQueue', JSON.stringify(queue))
+        setView('queued')
+        setMsg('')
+      } else {
+        playFailureSound()
+        setMsg('Error creating order')
+        setView('failed')
+        setTimeout(() => setMsg(''), 5000)
+      }
     }
     setLoading(false)
   }
@@ -497,6 +515,41 @@ export default function App() {
     setLinkOpened(false)
     setMsg('')
     setView('home')
+  }
+
+  const syncOfflineQueue = async () => {
+    const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]')
+    if (queue.length === 0) { setMsg('No queued orders'); setTimeout(() => setMsg(''), 3000); return }
+    if (!navigator.onLine) { setMsg('Still offline - try again later'); setTimeout(() => setMsg(''), 3000); return }
+    setLoading(true)
+    const processed = []
+    for (const order of queue) {
+      try {
+        const body = JSON.stringify({
+          amount: Math.round(parseFloat(order.amount) * 100),
+          currency: 'usd',
+          description: order.description || null,
+          customer_id: order.customerId || null,
+          customer_name: order.customerName || null
+        })
+        const r = await fetch(API + '/pos/moto/orders', { method: 'POST', headers: AH, body })
+        const d = await r.json()
+        if (d.card_entry_url) {
+          processed.push(order.id)
+          window.open(d.card_entry_url, '_blank')
+        }
+      } catch (e) { break }
+    }
+    const remaining = queue.filter(o => !processed.includes(o.id))
+    localStorage.setItem('offlineQueue', JSON.stringify(remaining))
+    setLoading(false)
+    if (processed.length > 0) {
+      setMsg(processed.length + ' order(s) synced. Payment pages opened.')
+      setView('home')
+    } else {
+      setMsg('Sync failed - check internet')
+    }
+    setTimeout(() => setMsg(''), 5000)
   }
 
   const selectCust = (c) => {
@@ -941,6 +994,31 @@ export default function App() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#dc2626', marginBottom: '0.5rem' }}>Payment Failed</h2>
           <p style={{ color: 'rgba(232,224,208,0.62)', marginBottom: '1.5rem' }}>{msg || 'The payment was declined or failed to process.'}</p>
           <button onClick={() => setView('confirm-payment')} className="g-btn">Try Again</button>
+          <button onClick={doReset} className="o-btn">New Payment</button>
+        </div>
+      </div>
+    </>
+  )
+
+  if (view === 'queued') return (
+    <>
+      <style>{G}</style>
+      <div className="scr">
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div style={{ width: '72px', height: '72px', background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1rem' }}>📋</div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#92400e', marginBottom: '0.5rem' }}>Order Queued</h2>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+            No internet connection. This order has been saved locally and will be processed automatically when internet returns.
+          </p>
+          <div className="info-box" style={{ textAlign: 'left', marginBottom: '1rem' }}>
+            <InfoRow k="Amount" v={'$' + parseFloat(pd.amount || 0).toFixed(2)} />
+            <InfoRow k="Customer" v={pd.customerName} />
+            <InfoRow k="Status" v="Queued - Waiting for internet" />
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#92400e', marginBottom: '1.5rem' }}>
+            Queued orders: {JSON.parse(localStorage.getItem('offlineQueue') || '[]').length}
+          </p>
+          <button onClick={syncOfflineQueue} className="g-btn" style={{ marginBottom: '0.5rem' }}>Sync Now</button>
           <button onClick={doReset} className="o-btn">New Payment</button>
         </div>
       </div>
