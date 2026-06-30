@@ -104,6 +104,7 @@ export default function App() {
   const [pwForm,      setPwForm]      = useState({cur:'',nw:'',cf:''})
   const [profile,     setProfile]     = useState({businessName:'',email:'',phone:'',address:'',country:''})
   const [showChat,    setShowChat]    = useState(false)
+  const [showConfetti, setShowConfetti] = useState(true)
   const [chatMessages, setChatMessages] = useState([])
   const [chatInput,    setChatInput]    = useState('')
   const [chatUnread,   setChatUnread]   = useState(0)
@@ -154,6 +155,12 @@ export default function App() {
         } catch(e) {}
       }, 150)
     } catch(e) {}
+  }, [])
+
+  // Auto-hide confetti after 10 seconds
+  React.useEffect(() => {
+    const t = setTimeout(() => setShowConfetti(false), 10000)
+    return () => clearTimeout(t)
   }, [])
 
   // Handle window resizing
@@ -480,14 +487,6 @@ export default function App() {
   )
 
   // SHELL
-  const [showConfetti, setShowConfetti] = React.useState(true)
-
-  // Auto-hide confetti after 10 seconds
-  React.useEffect(() => {
-    const timer = setTimeout(() => setShowConfetti(false), 10000)
-    return () => clearTimeout(timer)
-  }, [])
-
   return (
     <>
       <style>{CSS}
