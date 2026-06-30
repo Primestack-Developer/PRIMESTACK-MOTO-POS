@@ -112,6 +112,9 @@ export default function App() {
   const [linkOpened, setLinkOpened] = useState(false)
   const [pd, setPd] = useState({ amount: '', description: '', customerId: '', customerName: 'Walk-in Customer' })
   const [newCust, setNewCust]     = useState({ name: '', email: '', phone: '', billingAddress: '' })
+  const [posPin, setPosPin]       = useState('')
+  const [pinLocked, setPinLocked] = useState(() => !!localStorage.getItem('posPIN'))
+  const [pinSetup, setPinSetup]   = useState(false)
   const pollingIntervalRef = useRef(null)
   const pollingTimeoutRef = useRef(null)
 
@@ -694,6 +697,84 @@ export default function App() {
       </div>
     </>
   )
+
+  if (view === 'home' && pinLocked) return (
+    <>
+      <style>{G}</style>
+      <div className="scr">
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#e8e0d0', marginBottom: '0.5rem' }}>POS Locked</h2>
+          <p style={{ color: 'rgba(232,224,208,0.6)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Enter 6-digit PIN to access</p>
+          {msg && <p style={{ color: '#fca5a5', fontSize: '0.85rem', marginBottom: '1rem' }}>{msg}</p>}
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            value={posPin}
+            onChange={e => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+              setPosPin(val)
+              if (val.length === 6) {
+                const stored = localStorage.getItem('posPIN')
+                if (val === stored) {
+                  setPinLocked(false)
+                  setPosPin('')
+                  setMsg('')
+                } else {
+                  setMsg('Incorrect PIN')
+                  setPosPin('')
+                }
+              }
+            }}
+            placeholder="000000"
+            className="inp"
+            style={{ fontSize: '2rem', textAlign: 'center', letterSpacing: '0.5rem', fontWeight: '800', marginBottom: '1rem' }}
+          />
+          <p style={{ color: 'rgba(232,224,208,0.4)', fontSize: '0.75rem' }}>Enter PIN to unlock POS</p>
+        </div>
+      </div>
+    </>
+  )
+
+  if (view === 'home' && !localStorage.getItem('posPIN') && !pinSetup) {
+    // First time — prompt to set PIN
+    return (
+      <>
+        <style>{G}</style>
+        <div className="scr">
+          <div className="card" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔐</div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#e8e0d0', marginBottom: '0.5rem' }}>Set POS PIN</h2>
+            <p style={{ color: 'rgba(232,224,208,0.6)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Create a 6-digit PIN to protect your POS from unauthorized access</p>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={posPin}
+              onChange={e => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                setPosPin(val)
+                if (val.length === 6) {
+                  localStorage.setItem('posPIN', val)
+                  setPinSetup(true)
+                  setPinLocked(false)
+                  setPosPin('')
+                  setMsg('PIN set successfully!')
+                  setTimeout(() => setMsg(''), 3000)
+                }
+              }}
+              placeholder="000000"
+              className="inp"
+              style={{ fontSize: '2rem', textAlign: 'center', letterSpacing: '0.5rem', fontWeight: '800', marginBottom: '1rem' }}
+            />
+            <p style={{ color: 'rgba(232,224,208,0.4)', fontSize: '0.75rem' }}>Enter 6 digits — this will be required every time POS is opened</p>
+            <button onClick={() => { setPinSetup(true); setPinLocked(false) }} className="o-btn" style={{ marginTop: '1rem' }}>Skip for now</button>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   if (view === 'home') return (
     <>
