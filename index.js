@@ -1655,8 +1655,7 @@ router.post('/moto-card-entry/:orderId/confirm', express.json(), async (req, res
     // Confirm the payment with MOTO flag
     const confirmedIntent = await getStripe().paymentIntents.confirm(order.paymentIntentId, {
       payment_method: paymentMethodId,
-      payment_method_options: { card: { moto: true } },
-      metadata: { order_id: order.orderId, cardholderName: String(cardholderName || '').trim(), expected_cardholder: order.expectedCardholder || '' }
+      payment_method_options: { card: { moto: true } }
     });
 
     const origin = `${req.protocol}://${req.get('host')}`;
