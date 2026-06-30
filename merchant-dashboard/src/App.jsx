@@ -492,8 +492,14 @@ export default function App() {
       <style>{CSS}
 {`
 @keyframes confetti-fall {
-  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  0% { transform: translateY(-20px) rotate(0deg) scale(1); opacity: 1; }
+  20% { opacity: 1; }
+  100% { transform: translateY(100vh) rotate(1080deg) scale(0.3); opacity: 0; }
+}
+@keyframes confetti-sway {
+  0%,100% { margin-left: 0px; }
+  25% { margin-left: 15px; }
+  75% { margin-left: -15px; }
 }
 @keyframes marquee {
   0% { transform: translateX(100%); }
@@ -501,10 +507,8 @@ export default function App() {
 }
 .confetti-piece {
   position: fixed;
-  width: 10px;
-  height: 10px;
-  top: -10px;
-  animation: confetti-fall linear forwards;
+  top: -20px;
+  animation: confetti-fall linear forwards, confetti-sway ease-in-out infinite;
   z-index: 9999;
   pointer-events: none;
 }
@@ -518,7 +522,7 @@ export default function App() {
 }
 .marquee-text {
   display: inline-block;
-  animation: marquee 20s linear infinite;
+  animation: marquee 40s linear infinite;
   font-size: 13px;
   font-weight: 800;
   color: #1e0a0e;
@@ -531,17 +535,25 @@ export default function App() {
       {/* Confetti Blast */}
       {showConfetti && (
         <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:9999,overflow:'hidden'}}>
-          {Array.from({length:80}).map((_, i) => (
-            <div key={i} className="confetti-piece" style={{
-              left: Math.random()*100+'%',
-              background: ['#c8a870','#e8d5a8','#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dfe6e9','#fd79a8','#a29bfe'][i%10],
-              width: (Math.random()*8+6)+'px',
-              height: (Math.random()*8+6)+'px',
-              borderRadius: Math.random()>0.5?'50%':'0',
-              animationDuration: (Math.random()*3+2)+'s',
-              animationDelay: (Math.random()*3)+'s'
-            }}/>
-          ))}
+          {Array.from({length:120}).map((_, i) => {
+            const colors = ['#c8a870','#e8d5a8','#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#fd79a8','#a29bfe','#ffffff','#f39c12','#2ecc71']
+            const size = Math.random()*12+5
+            const isCircle = Math.random()>0.6
+            const isRect = !isCircle && Math.random()>0.5
+            return (
+              <div key={i} className="confetti-piece" style={{
+                left: Math.random()*100+'%',
+                background: colors[i%colors.length],
+                width: isRect ? size*2+'px' : size+'px',
+                height: isRect ? size*0.4+'px' : size+'px',
+                borderRadius: isCircle?'50%':isRect?'2px':'3px',
+                animationDuration: (Math.random()*4+3)+'s, '+(Math.random()*2+1.5)+'s',
+                animationDelay: (Math.random()*2)+'s',
+                opacity: 0.9,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+              }}/>
+            )
+          })}
         </div>
       )}
 
