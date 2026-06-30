@@ -480,10 +480,80 @@ export default function App() {
   )
 
   // SHELL
+  const [showConfetti, setShowConfetti] = React.useState(true)
+
+  // Auto-hide confetti after 10 seconds
+  React.useEffect(() => {
+    const timer = setTimeout(() => setShowConfetti(false), 10000)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <>
-      <style>{CSS}</style>
-      <div style={{display:'flex',minHeight:'100vh',background:'radial-gradient(circle at top, rgba(200,168,112,0.1), transparent 20%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)'}}>
+      <style>{CSS}
+{`
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: confetti-fall linear forwards;
+  z-index: 9999;
+  pointer-events: none;
+}
+.marquee-bar {
+  background: linear-gradient(90deg, #c8a870, #e8d5a8, #c8a870);
+  padding: 8px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  z-index: 50;
+}
+.marquee-text {
+  display: inline-block;
+  animation: marquee 20s linear infinite;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e0a0e;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+`}
+      </style>
+
+      {/* Confetti Blast */}
+      {showConfetti && (
+        <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:9999,overflow:'hidden'}}>
+          {Array.from({length:80}).map((_, i) => (
+            <div key={i} className="confetti-piece" style={{
+              left: Math.random()*100+'%',
+              background: ['#c8a870','#e8d5a8','#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dfe6e9','#fd79a8','#a29bfe'][i%10],
+              width: (Math.random()*8+6)+'px',
+              height: (Math.random()*8+6)+'px',
+              borderRadius: Math.random()>0.5?'50%':'0',
+              animationDuration: (Math.random()*3+2)+'s',
+              animationDelay: (Math.random()*3)+'s'
+            }}/>
+          ))}
+        </div>
+      )}
+
+      {/* Marquee Banner */}
+      <div className="marquee-bar" style={{position:'fixed',top:0,left:0,right:0,zIndex:1000}}>
+        <div className="marquee-text">
+          🎉 NEW LAUNCH — PrimeStack MOTO POS v2.0 — Powerful Features — Secure MOTO Payments — Real-Time Verification — Instant Notifications — Admin Chat — Fraud Protection — Offline Queue — 🚀 Built for Speed &amp; Security — 🎉 NEW LAUNCH — PrimeStack MOTO POS v2.0 — Powerful Features — Secure MOTO Payments — Real-Time Verification — Instant Notifications — Admin Chat — Fraud Protection — Offline Queue — 🚀 Built for Speed &amp; Security —
+        </div>
+      </div>
+
+      <div style={{display:'flex',minHeight:'100vh',paddingTop:'32px',background:'radial-gradient(circle at top, rgba(200,168,112,0.1), transparent 20%), linear-gradient(175deg,#1e0a0e 0%,#0f0608 40%,#160810 70%,#120608 100%)'}}>
 
         {/* MOBILE SIDEBAR OVERLAY */}
         {isMobile && sidebarOpen && (
