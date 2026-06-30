@@ -1567,7 +1567,7 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
   <script>
     const stripe = Stripe(${JSON.stringify(publishableKey)});
     const elements = stripe.elements({ clientSecret: ${JSON.stringify(clientSecret)}, appearance: { theme: 'night', variables: { colorPrimary: '#c8a870' } } });
-    const paymentElement = elements.create('payment', { layout: 'tabs' });
+    const paymentElement = elements.create('payment', { layout: 'tabs', paymentMethodOrder: ['card'], fields: { billingDetails: { name: 'never' } } });
     paymentElement.mount('#payment-element');
     const form = document.getElementById('payment-form');
     const submit = document.getElementById('submit');
@@ -1639,60 +1639,41 @@ router.post('/moto-card-entry/:orderId/confirm', express.json(), async (req, res
       return res.status(400).json({ error: 'Missing payment session details.' });
     }
 
-    const order = await prisma.order.findUnique({
-      where: { orderId }
-    });
-
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found.' });
-    }
+    const order = await prisma.order.findUnique({ where: { orderId } });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     const paymentIntentId = String(clientSecret).split('_secret_')[0];
     if (!paymentIntentId || paymentIntentId !== order.paymentIntentId) {
       return res.status(400).json({ error: 'Payment session mismatch.' });
     }
 
+    // Confirm the payment with MOTO flag
     const confirmedIntent = await getStripe().paymentIntents.confirm(order.paymentIntentId, {
       payment_method: paymentMethodId,
-      payment_method_options: {
-        card: {
-          moto: true
-        }
-      },
-      metadata: {
-        order_id: order.orderId,
-        cardholderName: String(cardholderName || '').trim(),
-        expected_cardholder: order.expectedCardholder || ''
-      }
+      payment_method_options: { card: { moto: true } },
+      metadata: { order_id: order.orderId, cardholderName: String(cardholderName || '').trim(), expected_cardholder: order.expectedCardholder || '' }
     });
-
-    if (['succeeded', 'processing', 'requires_payment_method', 'canceled'].includes(confirmedIntent.status)) {
-      await PaymentService.handlePaymentIntent(confirmedIntent);
-    }
 
     const origin = `${req.protocol}://${req.get('host')}`;
     const returnUrl = `${origin}/?payment=return&order_id=${encodeURIComponent(orderId)}`;
 
     if (confirmedIntent.status === 'succeeded' || confirmedIntent.status === 'processing') {
+      // Update order immediately — webhook will do the rest
+      await prisma.order.update({ where: { id: order.id }, data: { status: 'paid' } });
       return res.json({ return_url: returnUrl, status: confirmedIntent.status });
     }
 
     if (confirmedIntent.status === 'requires_action') {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'failed' }
-      });
-      return res.status(402).json({
-        error: 'This card requires customer authentication and cannot be used for MOTO payments.'
-      });
+      await prisma.order.update({ where: { id: order.id }, data: { status: 'failed' } });
+      return res.status(402).json({ error: 'This card requires authentication and cannot be used for MOTO payments.' });
     }
 
     return res.status(402).json({
-      error: confirmedIntent.last_payment_error?.message || 'Card was declined. Please verify the details or try another card.',
+      error: confirmedIntent.last_payment_error?.message || 'Card declined. Try another card.',
       status: confirmedIntent.status
     });
   } catch (error) {
-    console.error('MOTO confirm error:', error);
+    console.error('MOTO confirm error:', error.message);
     return res.status(500).json({ error: error.message || 'Unable to process payment.' });
   }
 });
