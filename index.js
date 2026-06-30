@@ -1652,9 +1652,10 @@ router.post('/moto-card-entry/:orderId/confirm', express.json(), async (req, res
       return res.status(400).json({ error: 'Payment session mismatch.' });
     }
 
-    // Confirm the payment (MOTO flag will be added once Stripe enables it on account)
+    // Confirm the payment with MOTO flag (enabled by Stripe on account)
     const confirmedIntent = await getStripe().paymentIntents.confirm(order.paymentIntentId, {
-      payment_method: paymentMethodId
+      payment_method: paymentMethodId,
+      payment_method_options: { card: { moto: true } }
     });
 
     const origin = `${req.protocol}://${req.get('host')}`;
