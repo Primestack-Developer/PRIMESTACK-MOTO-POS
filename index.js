@@ -1566,8 +1566,9 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
   </main>
   <script>
     const stripe = Stripe(${JSON.stringify(publishableKey)});
-    const elements = stripe.elements({ clientSecret: ${JSON.stringify(clientSecret)} });
-    elements.create('payment').mount('#payment-element');
+    const elements = stripe.elements({ clientSecret: ${JSON.stringify(clientSecret)}, appearance: { theme: 'night', variables: { colorPrimary: '#c8a870' } } });
+    const paymentElement = elements.create('payment', { layout: 'tabs' });
+    paymentElement.mount('#payment-element');
     const form = document.getElementById('payment-form');
     const submit = document.getElementById('submit');
     const message = document.getElementById('message');
@@ -1575,7 +1576,7 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       submit.disabled = true;
-      message.textContent = '';
+      message.textContent = 'Processing...';
 
       const { error: submitError } = await elements.submit();
       if (submitError) {
@@ -1616,6 +1617,8 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
         return;
       }
 
+      message.textContent = 'Payment successful! Redirecting...';
+      message.style.color = '#86efac';
       window.location.href = result.return_url || ${JSON.stringify(returnUrl)};
     });
   </script>
