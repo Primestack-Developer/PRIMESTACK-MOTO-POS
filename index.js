@@ -1566,60 +1566,65 @@ router.get('/moto-card-entry/:orderId', async (req, res) => {
   </main>
   <script>
     const stripe = Stripe(${JSON.stringify(publishableKey)});
-    const elements = stripe.elements({ clientSecret: ${JSON.stringify(clientSecret)}, appearance: { theme: 'night', variables: { colorPrimary: '#c8a870' } } });
-    const paymentElement = elements.create('payment', { layout: 'tabs', paymentMethodOrder: ['card'], fields: { billingDetails: { name: 'never' } } });
-    paymentElement.mount('#payment-element');
+    const elements = stripe.elements({ appearance: { theme: 'night', variables: { colorPrimary: '#c8a870', colorBackground: '#1a1d24', colorText: '#f6efe1' } } });
+    const cardElement = elements.create('card', {
+      style: {
+        base: { fontSize: '16px', color: '#f6efe1', '::placeholder': { color: 'rgba(232,224,208,0.5)' } },
+        invalid: { color: '#fca5a5' }
+      },
+      hidePostalCode: false
+    });
+    cardElement.mount('#payment-element');
+
     const form = document.getElementById('payment-form');
     const submit = document.getElementById('submit');
     const message = document.getElementById('message');
     const cardholderName = document.getElementById('cardholder-name');
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       submit.disabled = true;
       message.textContent = 'Processing...';
+      message.style.color = '#c8a870';
 
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        message.textContent = submitError.message || 'Please check the card details and try again.';
-        submit.disabled = false;
-        return;
-      }
-
-      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-        elements,
-        params: {
-          billing_details: {
-            name: (cardholderName.value || '').trim() || ${JSON.stringify(defaultCardholderName)}
-          }
+      // Step 1: Create PaymentMethod from card details (no confirmation yet)
+      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: (cardholderName.value || '').trim() || 'Customer'
         }
       });
 
-      if (paymentMethodError || !paymentMethod) {
-        message.textContent = paymentMethodError?.message || 'Unable to securely collect card details.';
+      if (pmError) {
+        message.textContent = pmError.message || 'Please check card details.';
+        message.style.color = '#fca5a5';
         submit.disabled = false;
         return;
       }
 
+      // Step 2: Send PaymentMethod to server — server confirms with MOTO flag
       const response = await fetch('/moto-card-entry/${encodeURIComponent(orderId)}/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_secret: ${JSON.stringify(clientSecret)},
           payment_method_id: paymentMethod.id,
-          cardholder_name: (cardholderName.value || '').trim() || ${JSON.stringify(defaultCardholderName)}
+          cardholder_name: (cardholderName.value || '').trim()
         })
       });
 
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        message.textContent = result.error || 'Payment failed. Please try another card.';
+        message.textContent = result.error || 'Payment failed. Try another card.';
+        message.style.color = '#fca5a5';
         submit.disabled = false;
         return;
       }
 
       message.textContent = 'Payment successful! Redirecting...';
       message.style.color = '#86efac';
-      window.location.href = result.return_url || ${JSON.stringify(returnUrl)};
+      setTimeout(() => { window.location.href = result.return_url || '/'; }, 1500);
     });
   </script>
 </body>
